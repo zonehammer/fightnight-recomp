@@ -76,3 +76,44 @@ PPC_FUNC(sub_82EB5748)
     }
 }
 #endif
+
+#if GAME_FNC
+// T3db's database load (sub_82EB6238) and the per-table loaders it calls
+// (r5: the table's short name); errors logged.
+static void LogT3dbError(const char* what, uint32_t name, uint32_t err)
+{
+    static int logged = 0;
+    if (err && logged++ < 40)
+        Log("T3db: %s %c%c%c%c -> error %u%s", what, char(name >> 24), char(name >> 16), char(name >> 8), char(name), err,
+            CurrentGuestStack().c_str());
+}
+extern "C" void __imp__sub_82EB6238(PPCContext& ctx, uint8_t* base);
+PPC_FUNC(sub_82EB6238)
+{
+    __imp__sub_82EB6238(ctx, base);
+    Log("T3db: database load -> %u", ctx.r3.u32);
+}
+extern "C" void __imp__sub_82EB4F00(PPCContext& ctx, uint8_t* base);
+PPC_FUNC(sub_82EB4F00)
+{
+    uint32_t name = ctx.r5.u32;
+    __imp__sub_82EB4F00(ctx, base);
+    LogT3dbError("new table", name, ctx.r3.u32);
+}
+extern "C" void __imp__sub_82EB4B78(PPCContext& ctx, uint8_t* base);
+PPC_FUNC(sub_82EB4B78)
+{
+    uint32_t name = ctx.r5.u32;
+    __imp__sub_82EB4B78(ctx, base);
+    LogT3dbError("reload table", name, ctx.r3.u32);
+}
+extern "C" void __imp__sub_82EAB130(PPCContext& ctx, uint8_t* base);
+PPC_FUNC(sub_82EAB130)
+{
+    uint32_t size = ctx.r5.u32;
+    __imp__sub_82EAB130(ctx, base);
+    static int logged = 0;
+    if (ctx.r3.u32 && logged++ < 20)
+        Log("T3db: stream read of %u bytes -> error %u%s", size, ctx.r3.u32, CurrentGuestStack().c_str());
+}
+#endif
