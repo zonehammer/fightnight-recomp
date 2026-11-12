@@ -662,6 +662,88 @@ namespace wet::prompt_art
         return true;
     }
 
+    // Fight Night's shoulder buttons: a light plate with the letters drawn on
+    // it in a dark colour (LB / RB / LT / RT). The letters are painted over in
+    // the plate's colour and L1 / R1 / L2 / R2 (or a key name) drawn instead.
+    inline bool RedrawPlate(Rgba* px, int w, int h, Symbol sym, const Label* label = nullptr)
+    {
+        auto lum = [](const Rgba& p) { return (p.r * 3 + p.g * 6 + p.b) / 10; };
+        int x0 = w, y0 = h, x1 = -1, y1 = -1, n = 0, sr = 0, sg = 0, sb = 0;
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+            {
+                const Rgba& p = px[y * w + x];
+                if (p.a < 200 || lum(p) < 150) continue;
+                x0 = std::min(x0, x); y0 = std::min(y0, y); x1 = std::max(x1, x); y1 = std::max(y1, y);
+                sr += p.r; sg += p.g; sb += p.b; n++;
+            }
+        if (n < 40)
+            return false;
+        Rgba plate = { uint8_t(sr / n), uint8_t(sg / n), uint8_t(sb / n), 255 };
+        // The letters: dark, opaque pixels inside the plate with plate on both sides.
+        int tx0 = w, ty0 = h, tx1 = -1, ty1 = -1;
+        for (int y = y0; y <= y1; y++)
+        {
+            int first = -1, last = -1;
+            for (int x = x0; x <= x1; x++)
+            {
+                const Rgba& p = px[y * w + x];
+                if (p.a >= 200 && lum(p) >= 150) { if (first < 0) first = x; last = x; }
+            }
+            for (int x = first + 1; first >= 0 && x < last; x++)
+            {
+                Rgba& p = px[y * w + x];
+                if (p.a < 150 || lum(p) >= 150) continue;
+                tx0 = std::min(tx0, x); ty0 = std::min(ty0, y); tx1 = std::max(tx1, x); ty1 = std::max(ty1, y);
+                p = plate;
+            }
+        }
+        if (tx1 < tx0)
+            return false;
+        // Soften what's left of the old letters' anti-aliasing.
+        for (int y = ty0 - 1; y <= ty1 + 1; y++)
+            for (int x = tx0 - 1; x <= tx1 + 1; x++)
+            {
+                if (x < 0 || y < 0 || x >= w || y >= h) continue;
+                Rgba& p = px[y * w + x];
+                if (p.a >= 200 && lum(p) >= 100 && lum(p) < 150) p = plate;
+            }
+        float cx = (tx0 + tx1 + 1) * 0.5f, cy = (ty0 + ty1 + 1) * 0.5f;
+        float gw = float(tx1 - tx0 + 1), gh = float(ty1 - ty0 + 1);
+        std::vector<Seg> segs;
+        std::vector<Box> fills;
+        float width;
+        if (label)
+        {
+            cx = (x0 + x1 + 1) * 0.5f;
+            LabelStrokes(*label, cx, cy, float(x1 - x0 + 1) * 0.8f, gh * 1.1f, segs, fills, width);
+        }
+        else
+        {
+            float th = std::min(gh, gw * 1.05f / 1.52f);
+            float cw = th * 0.62f, gap = th * 0.28f;
+            float total = cw * 2 + gap;
+            float ox = cx - total * 0.5f, oy = cy - th * 0.5f;
+            char a = (sym == Symbol::L1 || sym == Symbol::L2) ? 'L' : 'R';
+            char b = (sym == Symbol::L1 || sym == Symbol::R1) ? '1' : '2';
+            Glyph(a, ox, oy, th, th, segs);
+            Glyph(b, ox + cw + gap, oy, th, th, segs);
+            width = std::max(1.5f, th * 0.2f);
+        }
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+            {
+                float c = Coverage(float(x), float(y), segs, width, cx, cy, 0, &fills);
+                if (c <= 0) continue;
+                Rgba& p = px[y * w + x];
+                p.r = uint8_t(p.r + (24 - p.r) * c);
+                p.g = uint8_t(p.g + (24 - p.g) * c);
+                p.b = uint8_t(p.b + (24 - p.b) * c);
+                p.a = std::max<uint8_t>(p.a, uint8_t(255 * c));
+            }
+        return true;
+    }
+
     // ---- DXT1 (the in-world prompts) ----
 
     inline void DecodeDxt1(const uint8_t* src, int w, int h, Rgba* out)
