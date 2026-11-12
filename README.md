@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/banner.jpg" alt="Fight Night Champion Recompiled - native PC port" width="100%"></p>
+
 # Fight Night Champion Recompiled
 
 A work-in-progress native Windows port of **Fight Night Champion** (Xbox 360, 2011) made by **static
@@ -16,9 +18,21 @@ nothing derived from the game is ever committed.
 
 ## Status
 
-**Not playable yet.** This is the start of the port: the game's code recompiles and the
-runtime builds; getting it to boot to the menus is the work in progress. Please don't
-report bugs yet.
+**Playable.** Menus, Champion mode, fights and saving work. Still early: please report
+anything that goes wrong with `fightnight.log` (next to the game's exe).
+
+## Features
+
+- Native x64 Windows build of the game's own code, no emulator.
+- Higher resolutions (`resolution_scale` 1-3: 720p, 1440p, 4K) with SMAA / FXAA, AMD FSR
+  / CAS or NVIDIA Image Scaling, and 16x anisotropic filtering.
+- **Frame rate unlock** from 30 up to 360 FPS (F6 cycles in game): only the render loop
+  speeds up, the fight simulation keeps the game's fixed 60 Hz.
+- Controllers through SDL (Xbox, PlayStation and others), rumble.
+- Saves in `game\hdd` with automatic backups; achievements with pop-ups.
+- Settings overlay (F1), screenshots (F12), brightness / contrast / gamma / colour.
+- Hold **Back** on the pause menu to quit to desktop.
+- Launcher with settings and one-click updates.
 
 ## Installing (Windows 10/11, 64-bit)
 
@@ -72,6 +86,9 @@ saves and settings stay.
 ## Credits
 
 - [XenonRecomp](https://github.com/hedge-dev/XenonRecomp) (hedge-dev): the recompiler.
+- [Xenia Canary](https://github.com/xenia-canary/xenia-canary): the resolve readback /
+  downscale (fighters' kit colours) and the "Unlock FPS" game patch idea by illusion
+  ([game-patches](https://github.com/xenia-canary/game-patches)).
 - [Xenia](https://github.com/xenia-project/xenia): GPU and audio emulation, and the
   reference for the console's behaviour.
 - [SDL2](https://www.libsdl.org/), [Dear ImGui](https://github.com/ocornut/imgui),
