@@ -59,7 +59,7 @@ PPC_FUNC(sub_827C6380)
 
 // Kit recolouring (the "RecolorTex" job, sub_826BED10): the GPU draws the
 // recoloured textures and the CPU then reads them, so render-to-texture
-// results are copied back into guest memory while it runs and for a second
+// results are copied back into guest memory while it runs and for 10 s
 // after (the GPU may still be working through its resolves).
 static std::atomic<int> s_recolouring{0};
 static std::atomic<uint64_t> s_recolourEndNs{0};
@@ -83,7 +83,7 @@ namespace wet::fnc
     void FrameTick()
     {
         static bool readback = false;
-        bool want = s_recolouring.load() > 0 || os::MonotonicNs() - s_recolourEndNs.load() < 1000000000ull;
+        bool want = s_recolouring.load() > 0 || os::MonotonicNs() - s_recolourEndNs.load() < 10000000000ull;
         if (s_recolourEndNs.load() == 0 && s_recolouring.load() == 0)
             want = false;
         if (want != readback)

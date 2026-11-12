@@ -868,6 +868,8 @@ extern "C" void __imp__sub_828D5BD0(PPCContext& ctx, uint8_t* base);
 // hint and the hold's progress. GameStateUtil::IsPauseMenuActive (sub_828D5BD0)
 // compares the top of the game state stack with the pause state; it reads two
 // globals, checked here first so it's never called before the game set them up.
+namespace wet { bool MoviePlaying(); }
+
 static void UpdatePauseQuit(PPCContext& ctx)
 {
     static constexpr double kHoldSeconds = 1.5;
@@ -904,8 +906,24 @@ static void UpdatePauseQuit(PPCContext& ctx)
     // Fight Night: the PauseManager (global at 0x82FCA584, made by
     // sub_822AB0B0) has its "paused" byte at +22 (read by sub_822AA690).
     {
+        // Movies pause the game too: no quit hint while one plays. The 14
+        // pause reasons (bytes at +23) are logged as they change.
         uint32_t pm = Ld32(0x82FCA584);
-        paused = pm && Ld8(pm + 22) != 0;
+        paused = pm && Ld8(pm + 22) != 0 && !MoviePlaying();
+        if (pm)
+        {
+            static uint32_t lastReasons = ~0u;
+            uint32_t reasons = 0;
+            for (int i = 0; i < 14; i++)
+                reasons |= uint32_t(Ld8(pm + 23 + i) != 0) << i;
+            static int reasonLogs = 0;
+            if (reasons != lastReasons && reasonLogs < 200)
+            {
+                reasonLogs++;
+                Log("Pause reasons: %04X (paused %u, movie %d)", reasons, Ld8(pm + 22), MoviePlaying() ? 1 : 0);
+            }
+            lastReasons = reasons;
+        }
         static bool last = false;
         static int logged = 0;
         if (paused != last && logged < 100)

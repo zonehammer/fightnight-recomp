@@ -175,6 +175,8 @@ namespace
     // the GPU emulation race, and the top of the video flickers; this timing
     // avoids it. fightnight.ini video_mode = 0 turns it off.
     std::atomic<int> s_openVideos{ 0 };
+    // Movie files open (any format): the pause menu's quit hint stays off.
+    std::atomic<int> s_openMovies{ 0 };
 
     // Startup logo movies open now (input.cpp presses A through them with skip_intro).
     void IntroMovie(bool open)
@@ -217,11 +219,14 @@ namespace
                 VideoFileClosed();
             if (intro)
                 IntroMovie(false);
+            if (movie)
+                s_openMovies--;
             if (!music.empty())
                 music::GameMusicClosed(music);
         }
         bool video = false;     // a .bik movie: video mode while open
         bool intro = false;     // a startup logo movie (skip_intro)
+        bool movie = false;     // a movie file (.bik, .vp6) is open
         std::string music;      // one of the game's music streams (mu_*.xma): its name
 
         std::string guestPath;
@@ -440,6 +445,11 @@ namespace
             std::string ext = r.host.extension().string();
             for (auto& c : ext)
                 c = char(std::tolower((unsigned char)c));
+            if (ext == ".bik" || ext == ".vp6")
+            {
+                f->movie = true;
+                s_openMovies++;
+            }
             if (ext == ".bik" && options::VideoMode())
             {
                 f->video = true;
@@ -486,6 +496,8 @@ namespace
 
 namespace wet
 {
+    bool MoviePlaying() { return s_openMovies.load() > 0; }
+
     void InitFileSystem(const fs::path& gameDir, const fs::path& hddDir)
     {
         std::error_code ec;
