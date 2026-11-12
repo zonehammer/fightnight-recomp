@@ -62,6 +62,7 @@
 #include "xenia/gpu/d3d12/d3d12_graphics_system.h"
 #include "xenia/gpu/d3d12/pipeline_cache.h"
 #include "xenia/gpu/d3d12/wet_colour.h"
+#include "xenia/gpu/d3d12/wet_readback.h"
 #endif
 #include "xenia/kernel/kernel_state.h"
 #include "xenia/memory.h"
@@ -1762,6 +1763,15 @@ namespace wet::renderer
 #if WET_HAVE_D3D12
         xe::gpu::d3d12::wet_async_pipelines = options::AsyncShaders();
         xe::gpu::d3d12::wet_refresh_memory_every_frame = options::RefreshGpuMemory();
+        // Render-to-texture results the CPU reads (Fight Night recolours
+        // fighters' clothing on the GPU, then reads it): read back into guest
+        // memory. WET_READBACK_RESOLVE=0/1 overrides.
+        {
+            int readback = GAME_FNC ? 1 : 0;
+            if (const char* v = std::getenv("WET_READBACK_RESOLVE"))
+                readback = std::atoi(v);
+            xe::gpu::d3d12::wet_readback_resolve = readback;
+        }
         // Skipping render target copies back to an unchanged target: right for
         // WET, but in Conan, with resolution scaling, it now and then shows a
         // stale (black) frame - about once a second.

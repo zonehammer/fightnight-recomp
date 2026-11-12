@@ -4348,7 +4348,7 @@ index ffc8eeffa..54961f444 100644
    uint32_t primary_buffer_ptr_ = 0;
    uint32_t primary_buffer_size_ = 0;
 diff --git a/src/xenia/gpu/d3d12/d3d12_command_processor.cc b/src/xenia/gpu/d3d12/d3d12_command_processor.cc
-index 0ec70a7d1..ea55d7b2e 100644
+index 0ec70a7d1..702f30a01 100644
 --- a/src/xenia/gpu/d3d12/d3d12_command_processor.cc
 +++ b/src/xenia/gpu/d3d12/d3d12_command_processor.cc
 @@ -8,6 +8,9 @@
@@ -4361,12 +4361,21 @@ index 0ec70a7d1..ea55d7b2e 100644
  #include <cstring>
  #include <sstream>
  #include <utility>
-@@ -51,10 +54,39 @@ DEFINE_bool(d3d12_submit_on_primary_buffer_end, true,
+@@ -25,6 +28,7 @@
+ #include "xenia/gpu/draw_util.h"
+ #include "xenia/gpu/gpu_flags.h"
+ #include "xenia/gpu/registers.h"
++#include "xenia/gpu/texture_info.h"
+ #include "xenia/gpu/xenos.h"
+ #include "xenia/ui/d3d12/d3d12_presenter.h"
+ #include "xenia/ui/d3d12/d3d12_util.h"
+@@ -51,10 +55,41 @@ DEFINE_bool(d3d12_submit_on_primary_buffer_end, true,
              "possible to submit immediately to try to reduce frame latency.",
              "D3D12");
  
 +#if XE_WET_RUNTIME
 +#include "xenia/gpu/d3d12/wet_colour.h"
++#include "xenia/gpu/d3d12/wet_readback.h"
 +#include "xenia/gpu/d3d12/wet_smaa.h"
 +#include "xenia/gpu/d3d12/wet_smaa_tex.h"
 +#endif
@@ -4377,6 +4386,7 @@ index 0ec70a7d1..ea55d7b2e 100644
  
 +#if XE_WET_RUNTIME
 +std::atomic<bool> wet_refresh_memory_every_frame{false};
++std::atomic<int> wet_readback_resolve{0};
 +std::atomic<int> wet_brightness{0}, wet_contrast{100}, wet_gamma{100},
 +    wet_saturation{100};
 +
@@ -4401,7 +4411,7 @@ index 0ec70a7d1..ea55d7b2e 100644
  // Generated with `xb buildshaders`.
  namespace shaders {
  #include "xenia/gpu/shaders/bytecode/d3d12_5_1/apply_gamma_pwl_cs.h"
-@@ -754,6 +786,35 @@ bool D3D12CommandProcessor::SetupContext() {
+@@ -754,6 +789,35 @@ bool D3D12CommandProcessor::SetupContext() {
      return false;
    }
  
@@ -4437,7 +4447,7 @@ index 0ec70a7d1..ea55d7b2e 100644
    // Create the command list and one allocator because it's needed for a command
    // list.
    ID3D12CommandAllocator* command_allocator;
-@@ -1502,6 +1563,12 @@ bool D3D12CommandProcessor::SetupContext() {
+@@ -1502,6 +1566,12 @@ bool D3D12CommandProcessor::SetupContext() {
  void D3D12CommandProcessor::ShutdownContext() {
    AwaitAllQueueOperationsCompletion();
  
@@ -4450,7 +4460,7 @@ index 0ec70a7d1..ea55d7b2e 100644
    ui::d3d12::util::ReleaseAndNull(readback_buffer_);
    readback_buffer_size_ = 0;
  
-@@ -1516,6 +1583,9 @@ void D3D12CommandProcessor::ShutdownContext() {
+@@ -1516,6 +1586,9 @@ void D3D12CommandProcessor::ShutdownContext() {
  
    fxaa_source_texture_submission_ = 0;
    fxaa_source_texture_.Reset();
@@ -4460,7 +4470,7 @@ index 0ec70a7d1..ea55d7b2e 100644
  
    fxaa_extreme_pipeline_.Reset();
    fxaa_pipeline_.Reset();
-@@ -1525,6 +1595,12 @@ void D3D12CommandProcessor::ShutdownContext() {
+@@ -1525,6 +1598,12 @@ void D3D12CommandProcessor::ShutdownContext() {
    apply_gamma_pwl_pipeline_.Reset();
    apply_gamma_table_fxaa_luma_pipeline_.Reset();
    apply_gamma_table_pipeline_.Reset();
@@ -4473,7 +4483,7 @@ index 0ec70a7d1..ea55d7b2e 100644
    apply_gamma_root_signature_.Reset();
  
    // Unmapping will be done implicitly by the destruction.
-@@ -1625,6 +1701,64 @@ void D3D12CommandProcessor::WriteRegister(uint32_t index, uint32_t value) {
+@@ -1625,6 +1704,64 @@ void D3D12CommandProcessor::WriteRegister(uint32_t index, uint32_t value) {
    }
  }
  
@@ -4538,7 +4548,7 @@ index 0ec70a7d1..ea55d7b2e 100644
  void D3D12CommandProcessor::OnGammaRamp256EntryTableValueWritten() {
    gamma_ramp_256_entry_table_up_to_date_ = false;
  }
-@@ -1636,6 +1770,9 @@ void D3D12CommandProcessor::OnGammaRampPWLValueWritten() {
+@@ -1636,6 +1773,9 @@ void D3D12CommandProcessor::OnGammaRampPWLValueWritten() {
  void D3D12CommandProcessor::IssueSwap(uint32_t frontbuffer_ptr,
                                        uint32_t frontbuffer_width,
                                        uint32_t frontbuffer_height) {
@@ -4548,7 +4558,7 @@ index 0ec70a7d1..ea55d7b2e 100644
    SCOPE_profile_cpu_f("gpu");
  
    ui::Presenter* presenter = graphics_system_->presenter();
-@@ -1648,6 +1785,12 @@ void D3D12CommandProcessor::IssueSwap(uint32_t frontbuffer_ptr,
+@@ -1648,6 +1788,12 @@ void D3D12CommandProcessor::IssueSwap(uint32_t frontbuffer_ptr,
      return;
    }
  
@@ -4561,7 +4571,7 @@ index 0ec70a7d1..ea55d7b2e 100644
    // Obtain the actual front buffer size to pass to RefreshGuestOutput,
    // resolution-scaled if it's a resolve destination, or not otherwise.
    D3D12_SHADER_RESOURCE_VIEW_DESC swap_texture_srv_desc;
-@@ -1657,11 +1800,21 @@ void D3D12CommandProcessor::IssueSwap(uint32_t frontbuffer_ptr,
+@@ -1657,11 +1803,21 @@ void D3D12CommandProcessor::IssueSwap(uint32_t frontbuffer_ptr,
    if (!swap_texture_resource) {
      return;
    }
@@ -4583,7 +4593,7 @@ index 0ec70a7d1..ea55d7b2e 100644
        [this, &swap_texture_srv_desc, frontbuffer_format, swap_texture_resource,
         &swap_texture_desc](
            ui::Presenter::GuestOutputRefreshContext& context) -> bool {
-@@ -1671,6 +1824,14 @@ void D3D12CommandProcessor::IssueSwap(uint32_t frontbuffer_ptr,
+@@ -1671,6 +1827,14 @@ void D3D12CommandProcessor::IssueSwap(uint32_t frontbuffer_ptr,
          SwapPostEffect swap_post_effect = GetActualSwapPostEffect();
          bool use_fxaa = swap_post_effect == SwapPostEffect::kFxaa ||
                          swap_post_effect == SwapPostEffect::kFxaaExtreme;
@@ -4598,7 +4608,7 @@ index 0ec70a7d1..ea55d7b2e 100644
          if (use_fxaa) {
            // Make sure the texture of the correct size is available for FXAA.
            if (fxaa_source_texture_) {
-@@ -1850,6 +2011,17 @@ void D3D12CommandProcessor::IssueSwap(uint32_t frontbuffer_ptr,
+@@ -1850,6 +2014,17 @@ void D3D12CommandProcessor::IssueSwap(uint32_t frontbuffer_ptr,
          ApplyGammaConstants apply_gamma_constants;
          apply_gamma_constants.size[0] = uint32_t(swap_texture_desc.Width);
          apply_gamma_constants.size[1] = uint32_t(swap_texture_desc.Height);
@@ -4616,7 +4626,7 @@ index 0ec70a7d1..ea55d7b2e 100644
          deferred_command_list_.D3DSetComputeRoot32BitConstants(
              UINT(ApplyGammaRootParameter::kConstants),
              sizeof(apply_gamma_constants) / sizeof(uint32_t),
-@@ -1873,6 +2045,14 @@ void D3D12CommandProcessor::IssueSwap(uint32_t frontbuffer_ptr,
+@@ -1873,6 +2048,14 @@ void D3D12CommandProcessor::IssueSwap(uint32_t frontbuffer_ptr,
                use_fxaa ? apply_gamma_table_fxaa_luma_pipeline_.Get()
                         : apply_gamma_table_pipeline_.Get();
          }
@@ -4631,7 +4641,7 @@ index 0ec70a7d1..ea55d7b2e 100644
          SetExternalPipeline(apply_gamma_pipeline);
          SubmitBarriers();
          uint32_t group_count_x = (uint32_t(swap_texture_desc.Width) + 15) / 16;
-@@ -1916,6 +2096,20 @@ void D3D12CommandProcessor::IssueSwap(uint32_t frontbuffer_ptr,
+@@ -1916,6 +2099,20 @@ void D3D12CommandProcessor::IssueSwap(uint32_t frontbuffer_ptr,
                  D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
              // From now on, even in case of failure, guest_output_resource must
              // be transitioned back to kGuestOutputInternalState!
@@ -4652,7 +4662,7 @@ index 0ec70a7d1..ea55d7b2e 100644
              deferred_command_list_.D3DSetComputeRootSignature(
                  fxaa_root_signature_.Get());
              FxaaConstants fxaa_constants;
-@@ -1996,6 +2190,178 @@ Shader* D3D12CommandProcessor::LoadShader(xenos::ShaderType shader_type,
+@@ -1996,6 +2193,178 @@ Shader* D3D12CommandProcessor::LoadShader(xenos::ShaderType shader_type,
    return pipeline_cache_->LoadShader(shader_type, host_address, dword_count);
  }
  
@@ -4831,7 +4841,7 @@ index 0ec70a7d1..ea55d7b2e 100644
  bool D3D12CommandProcessor::IssueDraw(xenos::PrimitiveType primitive_type,
                                        uint32_t index_count,
                                        IndexBufferInfo* index_buffer_info,
-@@ -2052,6 +2418,10 @@ bool D3D12CommandProcessor::IssueDraw(xenos::PrimitiveType primitive_type,
+@@ -2052,6 +2421,10 @@ bool D3D12CommandProcessor::IssueDraw(xenos::PrimitiveType primitive_type,
      // cache.
      if (!memexport_used_vertex) {
        // This draw has no effect.
@@ -4842,7 +4852,7 @@ index 0ec70a7d1..ea55d7b2e 100644
        return true;
      }
    }
-@@ -2070,8 +2440,96 @@ bool D3D12CommandProcessor::IssueDraw(xenos::PrimitiveType primitive_type,
+@@ -2070,8 +2443,96 @@ bool D3D12CommandProcessor::IssueDraw(xenos::PrimitiveType primitive_type,
    }
    if (!primitive_processing_result.host_draw_vertex_count) {
      // Nothing to draw.
@@ -4939,7 +4949,7 @@ index 0ec70a7d1..ea55d7b2e 100644
  
    reg::RB_DEPTHCONTROL normalized_depth_control =
        draw_util::GetNormalizedDepthControl(regs);
-@@ -2104,6 +2562,41 @@ bool D3D12CommandProcessor::IssueDraw(xenos::PrimitiveType primitive_type,
+@@ -2104,6 +2565,41 @@ bool D3D12CommandProcessor::IssueDraw(xenos::PrimitiveType primitive_type,
                                      normalized_color_mask, *vertex_shader)) {
      return false;
    }
@@ -4981,7 +4991,7 @@ index 0ec70a7d1..ea55d7b2e 100644
  
    // Create the pipeline (for this, need the actually used render target formats
    // from the render target cache), translating the shaders - doing this now to
-@@ -2169,6 +2662,13 @@ bool D3D12CommandProcessor::IssueDraw(xenos::PrimitiveType primitive_type,
+@@ -2169,6 +2665,13 @@ bool D3D12CommandProcessor::IssueDraw(xenos::PrimitiveType primitive_type,
            render_target_cache_->depth_float24_convert_in_pixel_shader(),
        host_render_targets_used, pixel_shader && pixel_shader->writes_depth(),
        viewport_info);
@@ -4995,7 +5005,7 @@ index 0ec70a7d1..ea55d7b2e 100644
    draw_util::Scissor scissor;
    draw_util::GetScissor(regs, scissor);
    scissor.offset[0] *= draw_resolution_scale_x;
-@@ -2467,6 +2967,11 @@ bool D3D12CommandProcessor::IssueDraw(xenos::PrimitiveType primitive_type,
+@@ -2467,6 +2970,11 @@ bool D3D12CommandProcessor::IssueDraw(xenos::PrimitiveType primitive_type,
      }
    }
  
@@ -5007,7 +5017,34 @@ index 0ec70a7d1..ea55d7b2e 100644
    return true;
  }
  
-@@ -2663,6 +3168,21 @@ bool D3D12CommandProcessor::BeginSubmission(bool is_guest_command) {
+@@ -2500,10 +3008,26 @@ bool D3D12CommandProcessor::IssueCopy() {
+     return false;
+   }
+   uint32_t written_address, written_length;
++#if XE_WET_RUNTIME
++  reg::RB_COPY_DEST_INFO wet_copy_dest_info = {};
++  bool wet_scaled = false;
++  if (!render_target_cache_->Resolve(*memory_, *shared_memory_, *texture_cache_,
++                                     written_address, written_length,
++                                     &wet_copy_dest_info, &wet_scaled)) {
++    return false;
++  }
++  if (written_length &&
++      wet_readback_resolve.load(std::memory_order_relaxed)) {
++    WetReadbackResolve(written_address, written_length, wet_copy_dest_info,
++                       wet_scaled);
++    return true;
++  }
++#else
+   if (!render_target_cache_->Resolve(*memory_, *shared_memory_, *texture_cache_,
+                                      written_address, written_length)) {
+     return false;
+   }
++#endif
+   if (cvars::d3d12_readback_resolve &&
+       !texture_cache_->IsDrawResolutionScaled() && written_length) {
+     // Read the resolved data on the CPU.
+@@ -2663,6 +3187,21 @@ bool D3D12CommandProcessor::BeginSubmission(bool is_guest_command) {
        }
        frame_completed_ = frame;
      }
@@ -5029,7 +5066,7 @@ index 0ec70a7d1..ea55d7b2e 100644
    }
  
    if (!submission_open_) {
-@@ -2672,6 +3192,12 @@ bool D3D12CommandProcessor::BeginSubmission(bool is_guest_command) {
+@@ -2672,6 +3211,12 @@ bool D3D12CommandProcessor::BeginSubmission(bool is_guest_command) {
      // end of the submission (when async pipeline creation requests are
      // fulfilled).
      deferred_command_list_.Reset();
@@ -5042,7 +5079,7 @@ index 0ec70a7d1..ea55d7b2e 100644
  
      // Reset cached state of the command list.
      ff_viewport_update_needed_ = true;
-@@ -2790,6 +3316,23 @@ bool D3D12CommandProcessor::EndSubmission(bool is_swap) {
+@@ -2790,6 +3335,23 @@ bool D3D12CommandProcessor::EndSubmission(bool is_swap) {
      // destroyed between frames.
      SubmitBarriers();
  
@@ -5066,7 +5103,7 @@ index 0ec70a7d1..ea55d7b2e 100644
      // TODO(Triang3l): Error checking.
  
      ID3D12CommandQueue* direct_queue = provider.GetDirectQueue();
-@@ -2840,6 +3383,25 @@ bool D3D12CommandProcessor::EndSubmission(bool is_swap) {
+@@ -2840,6 +3402,25 @@ bool D3D12CommandProcessor::EndSubmission(bool is_swap) {
        pix_capturing_ = false;
      }
      frame_open_ = false;
@@ -5092,7 +5129,7 @@ index 0ec70a7d1..ea55d7b2e 100644
      // Submission already closed now, so minus 1.
      closed_frame_submissions_[(frame_current_++) % kQueueFrames] =
          GetCurrentSubmission() - 1;
-@@ -2882,6 +3444,145 @@ bool D3D12CommandProcessor::EndSubmission(bool is_swap) {
+@@ -2882,6 +3463,145 @@ bool D3D12CommandProcessor::EndSubmission(bool is_swap) {
    return true;
  }
  
@@ -5238,7 +5275,194 @@ index 0ec70a7d1..ea55d7b2e 100644
  bool D3D12CommandProcessor::CanEndSubmissionImmediately() const {
    return !submission_open_ || !pipeline_cache_->IsCreatingPipelines();
  }
-@@ -4359,6 +5060,491 @@ void D3D12CommandProcessor::WriteGammaRampSRV(
+@@ -4311,6 +5031,186 @@ bool D3D12CommandProcessor::UpdateBindings(const D3D12Shader* vertex_shader,
+   return true;
+ }
+ 
++#if XE_WET_RUNTIME
++void D3D12CommandProcessor::WetReadbackResolve(
++    uint32_t written_address, uint32_t written_length,
++    reg::RB_COPY_DEST_INFO copy_dest_info, bool is_scaled) {
++  {
++    WetResolveStreak& streak =
++        wet_resolve_streaks_[(uint64_t(written_address) << 32) |
++                             written_length];
++    if (streak.last_frame + 1 == frame_current_) {
++      ++streak.frames;
++    } else if (streak.last_frame != frame_current_) {
++      streak.frames = 1;
++    }
++    streak.last_frame = frame_current_;
++    if (streak.frames >= 60) {
++      return;
++    }
++    if (wet_resolve_streaks_.size() > 4096) {
++      for (auto it = wet_resolve_streaks_.begin();
++           it != wet_resolve_streaks_.end();) {
++        it = it->second.last_frame + 600 < frame_current_
++                 ? wet_resolve_streaks_.erase(it)
++                 : std::next(it);
++      }
++    }
++  }
++  uint32_t readback_length = written_length;
++  uint32_t pixel_size_log2 = 0, tile_count = 0;
++  D3D12_GPU_VIRTUAL_ADDRESS source_address = 0;
++  ID3D12Device* device = GetD3D12Provider().GetDevice();
++  if (is_scaled) {
++    // As Xenia Canary's IssueCopy_ReadbackResolvePath: downscale the written
++    // extent (whole 32x32 tiles of the destination) to 1x on the GPU.
++    const FormatInfo* format_info = FormatInfo::Get(
++        xenos::TextureFormat(uint32_t(copy_dest_info.copy_dest_format)));
++    pixel_size_log2 = xe::log2_floor(format_info->bits_per_pixel >> 3);
++    if (pixel_size_log2 > 3) {
++      return;
++    }
++    uint32_t group_bytes_log2 = pixel_size_log2 <= 2 ? 7 : 6;
++    if (written_address & ((UINT32_C(1) << group_bytes_log2) - 1)) {
++      return;
++    }
++    uint32_t tile_bytes = (32 * 32) << pixel_size_log2;
++    tile_count = written_length / tile_bytes;
++    if (!tile_count) {
++      return;
++    }
++    readback_length = tile_count * tile_bytes;
++    uint32_t scale_area = texture_cache_->draw_resolution_scale_x() *
++                          texture_cache_->draw_resolution_scale_y();
++    uint64_t scaled_start = uint64_t(written_address) * scale_area;
++    uint64_t scaled_length = uint64_t(readback_length) * scale_area;
++    uint64_t range_start =
++        texture_cache_->WetCurrentScaledResolveRangeStartScaled();
++    uint64_t range_length =
++        texture_cache_->WetCurrentScaledResolveRangeLengthScaled();
++    if (!range_length || scaled_start < range_start ||
++        scaled_start + scaled_length > range_start + range_length) {
++      return;
++    }
++    source_address = texture_cache_->GetCurrentScaledResolveRangeGPUAddress() +
++                     (scaled_start - range_start);
++    if (!wet_downscale_tried_) {
++      wet_downscale_tried_ = true;
++      // Root signature: the constants, the source (raw SRV) and the
++      // destination (raw UAV) as root descriptors.
++      D3D12_ROOT_PARAMETER parameters[3] = {};
++      parameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
++      parameters[0].Constants.ShaderRegister = 0;
++      parameters[0].Constants.Num32BitValues =
++          sizeof(wet_readback::Constants) / sizeof(uint32_t);
++      parameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
++      parameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_SRV;
++      parameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
++      parameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_UAV;
++      parameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
++      D3D12_ROOT_SIGNATURE_DESC desc = {};
++      desc.NumParameters = 3;
++      desc.pParameters = parameters;
++      *(wet_downscale_root_signature_.ReleaseAndGetAddressOf()) =
++          ui::d3d12::util::CreateRootSignature(GetD3D12Provider(), desc);
++      std::vector<uint8_t> code = wet_readback::Compile();
++      if (wet_downscale_root_signature_ && !code.empty()) {
++        *(wet_downscale_pipeline_.ReleaseAndGetAddressOf()) =
++            ui::d3d12::util::CreateComputePipeline(
++                device, code.data(), code.size(),
++                wet_downscale_root_signature_.Get());
++      }
++      XELOGW("Resolve readback: downscale shader {}",
++             wet_downscale_pipeline_ ? "ready" : "unavailable");
++    }
++    if (!wet_downscale_pipeline_) {
++      return;
++    }
++    if (readback_length > wet_downscale_buffer_size_) {
++      uint32_t size = xe::align(readback_length, UINT32_C(1) << 20);
++      D3D12_RESOURCE_DESC buffer_desc;
++      ui::d3d12::util::FillBufferResourceDesc(
++          buffer_desc, size, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
++      ID3D12Resource* buffer;
++      if (FAILED(device->CreateCommittedResource(
++              &ui::d3d12::util::kHeapPropertiesDefault,
++              GetD3D12Provider().GetHeapFlagCreateNotZeroed(), &buffer_desc,
++              D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr,
++              IID_PPV_ARGS(&buffer)))) {
++        return;
++      }
++      if (wet_downscale_buffer_) {
++        resources_for_deletion_.emplace_back(GetCurrentSubmission(),
++                                             wet_downscale_buffer_.Detach());
++      }
++      wet_downscale_buffer_.Attach(buffer);
++      wet_downscale_buffer_size_ = size;
++    }
++  }
++  ID3D12Resource* readback_buffer = RequestReadbackBuffer(readback_length);
++  if (!readback_buffer) {
++    return;
++  }
++  if (is_scaled) {
++    texture_cache_->TransitionCurrentScaledResolveRange(
++        D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
++    SubmitBarriers();
++    SetExternalPipeline(wet_downscale_pipeline_.Get());
++    deferred_command_list_.D3DSetComputeRootSignature(
++        wet_downscale_root_signature_.Get());
++    wet_readback::Constants constants = {};
++    constants.scale_x = texture_cache_->draw_resolution_scale_x();
++    constants.scale_y = texture_cache_->draw_resolution_scale_y();
++    constants.pixel_size_log2 = pixel_size_log2;
++    constants.tile_count = tile_count;
++    deferred_command_list_.D3DSetComputeRoot32BitConstants(
++        0, sizeof(constants) / sizeof(uint32_t), &constants, 0);
++    deferred_command_list_.D3DSetComputeRootShaderResourceView(1,
++                                                               source_address);
++    deferred_command_list_.D3DSetComputeRootUnorderedAccessView(
++        2, wet_downscale_buffer_->GetGPUVirtualAddress());
++    deferred_command_list_.D3DDispatch(tile_count, 1, 1);
++    PushTransitionBarrier(wet_downscale_buffer_.Get(),
++                          D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
++                          D3D12_RESOURCE_STATE_COPY_SOURCE);
++    SubmitBarriers();
++    deferred_command_list_.D3DCopyBufferRegion(
++        readback_buffer, 0, wet_downscale_buffer_.Get(), 0, readback_length);
++    PushTransitionBarrier(wet_downscale_buffer_.Get(),
++                          D3D12_RESOURCE_STATE_COPY_SOURCE,
++                          D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
++    texture_cache_->TransitionCurrentScaledResolveRange(
++        D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
++    SubmitBarriers();
++  } else {
++    shared_memory_->UseAsCopySource();
++    SubmitBarriers();
++    deferred_command_list_.D3DCopyBufferRegion(
++        readback_buffer, 0, shared_memory_->GetBuffer(), written_address,
++        readback_length);
++  }
++  if (!AwaitAllQueueOperationsCompletion()) {
++    return;
++  }
++  D3D12_RANGE read_range = {0, readback_length};
++  void* mapping;
++  if (SUCCEEDED(readback_buffer->Map(0, &read_range, &mapping))) {
++    std::memcpy(memory_->TranslatePhysical(written_address), mapping,
++                readback_length);
++    D3D12_RANGE write_range = {};
++    readback_buffer->Unmap(0, &write_range);
++    wet_readback_count_++;
++    wet_readback_bytes_ += readback_length;
++    if (wet_readback_count_ <= 20 ||
++        (wet_readback_count_ & (wet_readback_count_ - 1)) == 0) {
++      XELOGW("Resolve readback #{}: {:08X}+{:X}{} ({} MB so far)",
++             wet_readback_count_, written_address, readback_length,
++             is_scaled ? " (downscaled)" : "", wet_readback_bytes_ >> 20);
++    }
++  }
++}
++#endif
++
+ ID3D12Resource* D3D12CommandProcessor::RequestReadbackBuffer(uint32_t size) {
+   if (size == 0) {
+     return nullptr;
+@@ -4359,6 +5259,491 @@ void D3D12CommandProcessor::WriteGammaRampSRV(
    device->CreateShaderResourceView(gamma_ramp_buffer_.Get(), &desc, handle);
  }
  
@@ -5731,7 +5955,7 @@ index 0ec70a7d1..ea55d7b2e 100644
  }  // namespace gpu
  }  // namespace xe
 diff --git a/src/xenia/gpu/d3d12/d3d12_command_processor.h b/src/xenia/gpu/d3d12/d3d12_command_processor.h
-index 88bdcb438..2d78038c6 100644
+index 88bdcb438..fbdc005a7 100644
 --- a/src/xenia/gpu/d3d12/d3d12_command_processor.h
 +++ b/src/xenia/gpu/d3d12/d3d12_command_processor.h
 @@ -74,6 +74,47 @@ class D3D12CommandProcessor : public CommandProcessor {
@@ -5847,7 +6071,7 @@ index 88bdcb438..2d78038c6 100644
    };
    enum class ApplyGammaRootParameter : UINT {
      kConstants,
-@@ -516,6 +601,13 @@ class D3D12CommandProcessor : public CommandProcessor {
+@@ -516,6 +601,31 @@ class D3D12CommandProcessor : public CommandProcessor {
      kCount,
    };
    Microsoft::WRL::ComPtr<ID3D12RootSignature> apply_gamma_root_signature_;
@@ -5857,11 +6081,29 @@ index 88bdcb438..2d78038c6 100644
 +  Microsoft::WRL::ComPtr<ID3D12PipelineState> wet_colour_pipelines_[4];
 +  bool wet_colour_pipelines_tried_[4] = {};
 +  ID3D12PipelineState* WetColourPipeline(int variant);
++  // wet_readback.h: resolve results read back into guest memory.
++  void WetReadbackResolve(uint32_t written_address, uint32_t written_length,
++                          reg::RB_COPY_DEST_INFO copy_dest_info,
++                          bool is_scaled);
++  Microsoft::WRL::ComPtr<ID3D12RootSignature> wet_downscale_root_signature_;
++  Microsoft::WRL::ComPtr<ID3D12PipelineState> wet_downscale_pipeline_;
++  bool wet_downscale_tried_ = false;
++  Microsoft::WRL::ComPtr<ID3D12Resource> wet_downscale_buffer_;
++  uint32_t wet_downscale_buffer_size_ = 0;
++  uint64_t wet_readback_count_ = 0, wet_readback_bytes_ = 0;
++  // Resolves repeated every frame (the scene's own render targets) stop being
++  // read back after a second of it: only one-off ones (generated textures)
++  // are read by the CPU. Key: address << 32 | length.
++  struct WetResolveStreak {
++    uint64_t last_frame = 0;
++    uint32_t frames = 0;
++  };
++  std::unordered_map<uint64_t, WetResolveStreak> wet_resolve_streaks_;
 +#endif
    Microsoft::WRL::ComPtr<ID3D12PipelineState> apply_gamma_table_pipeline_;
    Microsoft::WRL::ComPtr<ID3D12PipelineState>
        apply_gamma_table_fxaa_luma_pipeline_;
-@@ -554,6 +646,61 @@ class D3D12CommandProcessor : public CommandProcessor {
+@@ -554,6 +664,61 @@ class D3D12CommandProcessor : public CommandProcessor {
    Microsoft::WRL::ComPtr<ID3D12Resource> fxaa_source_texture_;
    uint64_t fxaa_source_texture_submission_ = 0;
  
@@ -5924,13 +6166,17 @@ index 88bdcb438..2d78038c6 100644
    std::vector<D3D12_RESOURCE_BARRIER> barriers_;
  
 diff --git a/src/xenia/gpu/d3d12/d3d12_render_target_cache.cc b/src/xenia/gpu/d3d12/d3d12_render_target_cache.cc
-index 342d282cf..486792560 100644
+index 342d282cf..06646c3db 100644
 --- a/src/xenia/gpu/d3d12/d3d12_render_target_cache.cc
 +++ b/src/xenia/gpu/d3d12/d3d12_render_target_cache.cc
-@@ -1298,6 +1298,10 @@ bool D3D12RenderTargetCache::Resolve(const Memory& memory,
+@@ -1297,7 +1297,13 @@ bool D3D12RenderTargetCache::Resolve(const Memory& memory,
+                                      D3D12SharedMemory& shared_memory,
                                       D3D12TextureCache& texture_cache,
                                       uint32_t& written_address_out,
-                                      uint32_t& written_length_out) {
+-                                     uint32_t& written_length_out) {
++                                     uint32_t& written_length_out,
++                                     reg::RB_COPY_DEST_INFO* copy_dest_info_out,
++                                     bool* written_scaled_out) {
 +#if XE_WET_RUNTIME
 +  D3D12CommandProcessor::WetGpuScope wet_gpu_scope(
 +      command_processor_, D3D12CommandProcessor::kWetGpuResolve);
@@ -5938,7 +6184,7 @@ index 342d282cf..486792560 100644
    written_address_out = 0;
    written_length_out = 0;
  
-@@ -1316,6 +1320,24 @@ bool D3D12RenderTargetCache::Resolve(const Memory& memory,
+@@ -1316,6 +1322,24 @@ bool D3D12RenderTargetCache::Resolve(const Memory& memory,
    if (!resolve_info.coordinate_info.width_div_8 || !resolve_info.height_div_8) {
      return true;
    }
@@ -5963,7 +6209,20 @@ index 342d282cf..486792560 100644
  
    DeferredCommandList& command_list =
        command_processor_.GetDeferredCommandList();
-@@ -4400,6 +4422,52 @@ void D3D12RenderTargetCache::PerformTransfersAndResolveClears(
+@@ -1412,6 +1436,12 @@ bool D3D12RenderTargetCache::Resolve(const Memory& memory,
+                                           resolve_info.copy_dest_extent_length);
+         written_address_out = resolve_info.copy_dest_extent_start;
+         written_length_out = resolve_info.copy_dest_extent_length;
++        if (copy_dest_info_out) {
++          *copy_dest_info_out = resolve_info.copy_dest_info;
++        }
++        if (written_scaled_out) {
++          *written_scaled_out = draw_resolution_scaled;
++        }
+         copied = true;
+       } else {
+         XELOGE(
+@@ -4400,6 +4430,52 @@ void D3D12RenderTargetCache::PerformTransfersAndResolveClears(
      const std::vector<Transfer>* render_target_transfers,
      const uint64_t* render_target_resolve_clear_values,
      const Transfer::Rectangle* resolve_clear_rectangle) {
@@ -6016,7 +6275,7 @@ index 342d282cf..486792560 100644
    assert_true(GetPath() == Path::kHostRenderTargets);
  
    const ui::d3d12::D3D12Provider& provider =
-@@ -6332,6 +6400,10 @@ void D3D12RenderTargetCache::DumpRenderTargets(uint32_t dump_base,
+@@ -6332,6 +6408,10 @@ void D3D12RenderTargetCache::DumpRenderTargets(uint32_t dump_base,
                                                 uint32_t dump_rows,
                                                 uint32_t dump_pitch) {
    assert_true(GetPath() == Path::kHostRenderTargets);
@@ -6027,6 +6286,21 @@ index 342d282cf..486792560 100644
  
    GetResolveCopyRectanglesToDump(dump_base, dump_row_length_used, dump_rows,
                                   dump_pitch, dump_rectangles_);
+diff --git a/src/xenia/gpu/d3d12/d3d12_render_target_cache.h b/src/xenia/gpu/d3d12/d3d12_render_target_cache.h
+index c0bb7420a..d5680d710 100644
+--- a/src/xenia/gpu/d3d12/d3d12_render_target_cache.h
++++ b/src/xenia/gpu/d3d12/d3d12_render_target_cache.h
+@@ -86,7 +86,9 @@ class D3D12RenderTargetCache final : public RenderTargetCache {
+   // frame for calling.
+   bool Resolve(const Memory& memory, D3D12SharedMemory& shared_memory,
+                D3D12TextureCache& texture_cache, uint32_t& written_address_out,
+-               uint32_t& written_length_out);
++               uint32_t& written_length_out,
++               reg::RB_COPY_DEST_INFO* copy_dest_info_out = nullptr,
++               bool* written_scaled_out = nullptr);
+ 
+   // Returns true if any downloads were submitted to the command processor.
+   bool InitializeTraceSubmitDownloads();
 diff --git a/src/xenia/gpu/d3d12/d3d12_shared_memory.cc b/src/xenia/gpu/d3d12/d3d12_shared_memory.cc
 index 901d45925..0bc8c33c7 100644
 --- a/src/xenia/gpu/d3d12/d3d12_shared_memory.cc
@@ -6291,10 +6565,27 @@ index b96c200b9..6cd449021 100644
  }
  
 diff --git a/src/xenia/gpu/d3d12/d3d12_texture_cache.h b/src/xenia/gpu/d3d12/d3d12_texture_cache.h
-index 0f9ffa650..246c9407f 100644
+index 0f9ffa650..f29c11e79 100644
 --- a/src/xenia/gpu/d3d12/d3d12_texture_cache.h
 +++ b/src/xenia/gpu/d3d12/d3d12_texture_cache.h
-@@ -156,6 +156,11 @@ class D3D12TextureCache final : public TextureCache {
+@@ -144,6 +144,16 @@ class D3D12TextureCache final : public TextureCache {
+   // MakeScaledResolveRangeCurrent call.
+   D3D12_GPU_VIRTUAL_ADDRESS GetCurrentScaledResolveRangeGPUAddress() const;
+   void TransitionCurrentScaledResolveRange(D3D12_RESOURCE_STATES new_state);
++#if XE_WET_RUNTIME
++  // The range of the last MakeScaledResolveRangeCurrent call, in the scaled
++  // physical address space (resolve readback).
++  uint64_t WetCurrentScaledResolveRangeStartScaled() const {
++    return scaled_resolve_current_range_start_scaled_;
++  }
++  uint64_t WetCurrentScaledResolveRangeLengthScaled() const {
++    return scaled_resolve_current_range_length_scaled_;
++  }
++#endif
+   void MarkCurrentScaledResolveRangeUAVWritesCommitNeeded() {
+     assert_true(IsDrawResolutionScaled());
+     GetCurrentScaledResolveBuffer().SetUAVBarrierPending();
+@@ -156,6 +166,11 @@ class D3D12TextureCache final : public TextureCache {
    ID3D12Resource* RequestSwapTexture(
        D3D12_SHADER_RESOURCE_VIEW_DESC& srv_desc_out,
        xenos::TextureFormat& format_out);
@@ -6690,6 +6981,193 @@ index 000000000..84cb604f7
 +}  // namespace xe
 +
 +#endif  // XENIA_GPU_D3D12_WET_COLOUR_H_
+diff --git a/src/xenia/gpu/d3d12/wet_readback.h b/src/xenia/gpu/d3d12/wet_readback.h
+new file mode 100644
+index 000000000..d784f90f7
+--- /dev/null
++++ b/src/xenia/gpu/d3d12/wet_readback.h
+@@ -0,0 +1,181 @@
++/**
++ * Fight Night recomp: reading render-to-texture results back into guest
++ * memory for the CPU (the game recolours fighters' clothing on the GPU and
++ * then reads the result). With resolution scaling the resolve goes to the
++ * scaled buffer only, so it's downscaled back to 1x on the GPU first: the
++ * downscale is Xenia Canary's resolve_downscale shader (2026, BSD licence),
++ * here in HLSL compiled at run time with the system's D3DCompiler_47.dll.
++ */
++#ifndef XENIA_GPU_D3D12_WET_READBACK_H_
++#define XENIA_GPU_D3D12_WET_READBACK_H_
++
++#include <atomic>
++#include <cstring>
++#include <vector>
++
++#include "xenia/base/logging.h"
++#include "xenia/ui/d3d12/d3d12_api.h"
++
++namespace xe {
++namespace gpu {
++namespace d3d12 {
++
++// 0: no readback (Xenia's default), 1: every resolve, synchronously.
++extern std::atomic<int> wet_readback_resolve;
++
++namespace wet_readback {
++
++struct Constants {
++  uint32_t scale_x;
++  uint32_t scale_y;
++  uint32_t pixel_size_log2;
++  uint32_t tile_count;
++  uint32_t source_offset_bytes;
++  uint32_t half_pixel_offset;
++};
++
++inline const char* Source() {
++  return R"HLSL(
++cbuffer Constants : register(b0) {
++  uint xe_scale_x;
++  uint xe_scale_y;
++  uint xe_pixel_size_log2;
++  uint xe_tile_count;
++  uint xe_source_offset_bytes;
++  uint xe_half_pixel_offset;
++};
++ByteAddressBuffer xe_source : register(t0);
++RWByteAddressBuffer xe_dest : register(u0);
++
++uint ScaledBlockByte(uint tile_src_base, uint tile_rel_bytes, uint pixel_size_log2,
++                     uint scale_x, uint scale_y, uint sample_x, uint sample_y) {
++  uint group_size_log2 = (pixel_size_log2 <= 2u) ? 7u : 6u;
++  uint group_index = tile_rel_bytes >> group_size_log2;
++  uint in_group = tile_rel_bytes & ((1u << group_size_log2) - 1u);
++  uint block_index = in_group >> pixel_size_log2;
++  uint px;
++  uint py;
++  if (pixel_size_log2 == 0u) {
++    px = (block_index & 7u) | (((block_index >> 6u) & 1u) << 3u);
++    py = ((block_index >> 4u) & 1u) | (((block_index >> 3u) & 1u) << 1u) |
++         (((block_index >> 5u) & 1u) << 2u);
++  } else if (pixel_size_log2 == 1u) {
++    px = (block_index & 7u) | (((block_index >> 5u) & 1u) << 3u);
++    py = (block_index >> 3u) & 3u;
++  } else if (pixel_size_log2 == 2u) {
++    px = (block_index & 3u) | (((block_index >> 3u) & 3u) << 2u);
++    py = (block_index >> 2u) & 1u;
++  } else {
++    px = (block_index & 1u) | (((block_index >> 2u) & 1u) << 1u);
++    py = (block_index >> 1u) & 1u;
++  }
++  uint group_blocks_x_log2 = (pixel_size_log2 >= 3u) ? (5u - pixel_size_log2) : 4u;
++  uint group_blocks_y_log2 = 3u - min(pixel_size_log2, 2u);
++  uint host_x = px * scale_x + sample_x;
++  uint host_y = py * scale_y + sample_y;
++  uint host_group_x = host_x >> group_blocks_x_log2;
++  uint host_group_y = host_y >> group_blocks_y_log2;
++  uint host_group_index = host_group_x * scale_y + host_group_y;
++  uint pos_x = host_x & ((1u << group_blocks_x_log2) - 1u);
++  uint pos_y = host_y & ((1u << group_blocks_y_log2) - 1u);
++  uint group_width_bytes_log2 = group_blocks_x_log2 + pixel_size_log2;
++  uint scaled_in_group =
++      (host_group_index << (group_width_bytes_log2 + group_blocks_y_log2)) |
++      (pos_y << group_width_bytes_log2) | (pos_x << pixel_size_log2);
++  uint group_size_scaled = (1u << group_size_log2) * (scale_x * scale_y);
++  return tile_src_base + group_index * group_size_scaled + scaled_in_group;
++}
++
++[numthreads(128, 1, 1)]
++void main(uint3 group_id : SV_GroupID, uint thread_index : SV_GroupIndex) {
++  uint tile_index = group_id.x;
++  if (tile_index >= xe_tile_count) {
++    return;
++  }
++  uint pixel_size_log2 = xe_pixel_size_log2;
++  uint scale_x = xe_scale_x;
++  uint scale_y = xe_scale_y;
++  uint scale_xy = scale_x * scale_y;
++  uint tile_size_1x = (32u * 32u) << pixel_size_log2;
++  uint tile_size_scaled = tile_size_1x * scale_xy;
++  uint tile_dwords = tile_size_1x >> 2u;
++  uint sample_x = 0u;
++  uint sample_y = 0u;
++  if (xe_half_pixel_offset != 0u && scale_xy > 1u) {
++    sample_x = scale_x >> 1u;
++    sample_y = scale_y >> 1u;
++  }
++  uint tile_src_base = xe_source_offset_bytes + tile_index * tile_size_scaled;
++  uint tile_dst_base = tile_index * tile_size_1x;
++  for (uint dword_index = thread_index; dword_index < tile_dwords; dword_index += 128u) {
++    uint dst_dword_bytes = tile_dst_base + (dword_index << 2u);
++    uint dword_rel_bytes = dword_index << 2u;
++    if (pixel_size_log2 >= 2u) {
++      uint dword_offset_bytes = (pixel_size_log2 == 3u) ? (dword_rel_bytes & 4u) : 0u;
++      uint src_bytes = ScaledBlockByte(tile_src_base, dword_rel_bytes, pixel_size_log2,
++                                       scale_x, scale_y, sample_x, sample_y) +
++                       dword_offset_bytes;
++      xe_dest.Store(dst_dword_bytes, xe_source.Load(src_bytes));
++    } else {
++      uint texels_per_dword = 4u >> pixel_size_log2;
++      uint bytes_per_block = 1u << pixel_size_log2;
++      uint component_bits = 8u << pixel_size_log2;
++      uint component_mask = (1u << component_bits) - 1u;
++      uint packed = 0u;
++      for (uint texel_index = 0u; texel_index < texels_per_dword; ++texel_index) {
++        uint src_bytes = ScaledBlockByte(
++            tile_src_base, dword_rel_bytes + texel_index * bytes_per_block,
++            pixel_size_log2, scale_x, scale_y, sample_x, sample_y);
++        uint src_word = xe_source.Load(src_bytes & ~3u);
++        packed |= ((src_word >> ((src_bytes & 3u) << 3u)) & component_mask)
++                  << (texel_index * component_bits);
++      }
++      xe_dest.Store(dst_dword_bytes, packed);
++    }
++  }
++}
++)HLSL";
++}
++
++inline std::vector<uint8_t> Compile() {
++  std::vector<uint8_t> result;
++  static HMODULE module = LoadLibraryW(L"D3DCompiler_47.dll");
++  if (!module) {
++    XELOGW("Resolve readback: D3DCompiler_47.dll not found");
++    return result;
++  }
++  auto compile = reinterpret_cast<pD3DCompile>(
++      reinterpret_cast<void*>(GetProcAddress(module, "D3DCompile")));
++  if (!compile) {
++    return result;
++  }
++  const char* source = Source();
++  ID3DBlob* code = nullptr;
++  ID3DBlob* errors = nullptr;
++  HRESULT hr = compile(source, std::strlen(source), "wet_readback.hlsl",
++                       nullptr, nullptr, "main", "cs_5_1",
++                       D3DCOMPILE_OPTIMIZATION_LEVEL3, 0, &code, &errors);
++  if (errors) {
++    XELOGW("Resolve readback shader compiler output: {}",
++           static_cast<const char*>(errors->GetBufferPointer()));
++    errors->Release();
++  }
++  if (SUCCEEDED(hr) && code) {
++    const uint8_t* data = static_cast<const uint8_t*>(code->GetBufferPointer());
++    result.assign(data, data + code->GetBufferSize());
++  } else {
++    XELOGW("Resolve readback: shader compilation failed (0x{:08X})",
++           uint32_t(hr));
++  }
++  if (code) {
++    code->Release();
++  }
++  return result;
++}
++
++}  // namespace wet_readback
++}  // namespace d3d12
++}  // namespace gpu
++}  // namespace xe
++
++#endif  // XENIA_GPU_D3D12_WET_READBACK_H_
 diff --git a/src/xenia/gpu/d3d12/wet_smaa.h b/src/xenia/gpu/d3d12/wet_smaa.h
 new file mode 100644
 index 000000000..69ee09c8c
