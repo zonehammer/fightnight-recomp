@@ -4348,7 +4348,7 @@ index ffc8eeffa..54961f444 100644
    uint32_t primary_buffer_ptr_ = 0;
    uint32_t primary_buffer_size_ = 0;
 diff --git a/src/xenia/gpu/d3d12/d3d12_command_processor.cc b/src/xenia/gpu/d3d12/d3d12_command_processor.cc
-index 0ec70a7d1..23099aa15 100644
+index 0ec70a7d1..a96720bfd 100644
 --- a/src/xenia/gpu/d3d12/d3d12_command_processor.cc
 +++ b/src/xenia/gpu/d3d12/d3d12_command_processor.cc
 @@ -8,6 +8,9 @@
@@ -5017,7 +5017,7 @@ index 0ec70a7d1..23099aa15 100644
    return true;
  }
  
-@@ -2500,10 +3008,26 @@ bool D3D12CommandProcessor::IssueCopy() {
+@@ -2500,10 +3008,50 @@ bool D3D12CommandProcessor::IssueCopy() {
      return false;
    }
    uint32_t written_address, written_length;
@@ -5029,7 +5029,31 @@ index 0ec70a7d1..23099aa15 100644
 +                                     &wet_copy_dest_info, &wet_scaled)) {
 +    return false;
 +  }
-+  if (written_length &&
++  // Every resolve's recurrence is tracked (even with readback off), so the
++  // scene's own render targets - resolved every frame - are known as such
++  // before a readback window opens.
++  bool wet_recurring = false;
++  if (written_length) {
++    WetResolveStreak& streak =
++        wet_resolve_streaks_[(uint64_t(written_address) << 32) |
++                             written_length];
++    if (streak.last_frame + 1 == frame_current_) {
++      ++streak.frames;
++    } else if (streak.last_frame != frame_current_) {
++      streak.frames = 1;
++    }
++    streak.last_frame = frame_current_;
++    wet_recurring = streak.frames >= 3;
++    if (wet_resolve_streaks_.size() > 4096) {
++      for (auto it = wet_resolve_streaks_.begin();
++           it != wet_resolve_streaks_.end();) {
++        it = it->second.last_frame + 600 < frame_current_
++                 ? wet_resolve_streaks_.erase(it)
++                 : std::next(it);
++      }
++    }
++  }
++  if (written_length && !wet_recurring &&
 +      wet_readback_resolve.load(std::memory_order_relaxed)) {
 +    WetReadbackResolve(written_address, written_length, wet_copy_dest_info,
 +                       wet_scaled);
@@ -5044,7 +5068,7 @@ index 0ec70a7d1..23099aa15 100644
    if (cvars::d3d12_readback_resolve &&
        !texture_cache_->IsDrawResolutionScaled() && written_length) {
      // Read the resolved data on the CPU.
-@@ -2663,6 +3187,21 @@ bool D3D12CommandProcessor::BeginSubmission(bool is_guest_command) {
+@@ -2663,6 +3211,21 @@ bool D3D12CommandProcessor::BeginSubmission(bool is_guest_command) {
        }
        frame_completed_ = frame;
      }
@@ -5066,7 +5090,7 @@ index 0ec70a7d1..23099aa15 100644
    }
  
    if (!submission_open_) {
-@@ -2672,6 +3211,12 @@ bool D3D12CommandProcessor::BeginSubmission(bool is_guest_command) {
+@@ -2672,6 +3235,12 @@ bool D3D12CommandProcessor::BeginSubmission(bool is_guest_command) {
      // end of the submission (when async pipeline creation requests are
      // fulfilled).
      deferred_command_list_.Reset();
@@ -5079,7 +5103,7 @@ index 0ec70a7d1..23099aa15 100644
  
      // Reset cached state of the command list.
      ff_viewport_update_needed_ = true;
-@@ -2790,6 +3335,23 @@ bool D3D12CommandProcessor::EndSubmission(bool is_swap) {
+@@ -2790,6 +3359,23 @@ bool D3D12CommandProcessor::EndSubmission(bool is_swap) {
      // destroyed between frames.
      SubmitBarriers();
  
@@ -5103,7 +5127,7 @@ index 0ec70a7d1..23099aa15 100644
      // TODO(Triang3l): Error checking.
  
      ID3D12CommandQueue* direct_queue = provider.GetDirectQueue();
-@@ -2840,6 +3402,25 @@ bool D3D12CommandProcessor::EndSubmission(bool is_swap) {
+@@ -2840,6 +3426,25 @@ bool D3D12CommandProcessor::EndSubmission(bool is_swap) {
        pix_capturing_ = false;
      }
      frame_open_ = false;
@@ -5129,7 +5153,7 @@ index 0ec70a7d1..23099aa15 100644
      // Submission already closed now, so minus 1.
      closed_frame_submissions_[(frame_current_++) % kQueueFrames] =
          GetCurrentSubmission() - 1;
-@@ -2882,6 +3463,145 @@ bool D3D12CommandProcessor::EndSubmission(bool is_swap) {
+@@ -2882,6 +3487,145 @@ bool D3D12CommandProcessor::EndSubmission(bool is_swap) {
    return true;
  }
  
@@ -5275,7 +5299,7 @@ index 0ec70a7d1..23099aa15 100644
  bool D3D12CommandProcessor::CanEndSubmissionImmediately() const {
    return !submission_open_ || !pipeline_cache_->IsCreatingPipelines();
  }
-@@ -4311,6 +5031,197 @@ bool D3D12CommandProcessor::UpdateBindings(const D3D12Shader* vertex_shader,
+@@ -4311,6 +5055,175 @@ bool D3D12CommandProcessor::UpdateBindings(const D3D12Shader* vertex_shader,
    return true;
  }
  
@@ -5292,28 +5316,6 @@ index 0ec70a7d1..23099aa15 100644
 +    if (fb_last && written_address <= fb_last &&
 +        written_address + written_length - 1 >= fb_first) {
 +      return;
-+    }
-+  }
-+  {
-+    WetResolveStreak& streak =
-+        wet_resolve_streaks_[(uint64_t(written_address) << 32) |
-+                             written_length];
-+    if (streak.last_frame + 1 == frame_current_) {
-+      ++streak.frames;
-+    } else if (streak.last_frame != frame_current_) {
-+      streak.frames = 1;
-+    }
-+    streak.last_frame = frame_current_;
-+    if (streak.frames >= 60) {
-+      return;
-+    }
-+    if (wet_resolve_streaks_.size() > 4096) {
-+      for (auto it = wet_resolve_streaks_.begin();
-+           it != wet_resolve_streaks_.end();) {
-+        it = it->second.last_frame + 600 < frame_current_
-+                 ? wet_resolve_streaks_.erase(it)
-+                 : std::next(it);
-+      }
 +    }
 +  }
 +  uint32_t readback_length = written_length;
@@ -5473,7 +5475,7 @@ index 0ec70a7d1..23099aa15 100644
  ID3D12Resource* D3D12CommandProcessor::RequestReadbackBuffer(uint32_t size) {
    if (size == 0) {
      return nullptr;
-@@ -4359,6 +5270,491 @@ void D3D12CommandProcessor::WriteGammaRampSRV(
+@@ -4359,6 +5272,491 @@ void D3D12CommandProcessor::WriteGammaRampSRV(
    device->CreateShaderResourceView(gamma_ramp_buffer_.Get(), &desc, handle);
  }
  
