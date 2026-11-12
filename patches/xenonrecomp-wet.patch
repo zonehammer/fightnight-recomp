@@ -1,5 +1,5 @@
 diff --git a/XenonRecomp/recompiler.cpp b/XenonRecomp/recompiler.cpp
-index fa91527..6f7b2c6 100644
+index fa91527..1dada97 100644
 --- a/XenonRecomp/recompiler.cpp
 +++ b/XenonRecomp/recompiler.cpp
 @@ -525,6 +525,128 @@ bool Recompiler::Recompile(
@@ -305,7 +305,7 @@ index fa91527..6f7b2c6 100644
      case PPC_INST_VSLW:
      case PPC_INST_VSLW128:
          // TODO: vectorize, ensure endianness is correct
-@@ -2178,6 +2375,66 @@ bool Recompiler::Recompile(
+@@ -2178,6 +2375,74 @@ bool Recompiler::Recompile(
          }
          break;
  
@@ -364,15 +364,23 @@ index fa91527..6f7b2c6 100644
 +        break;
 +
 +    case PPC_INST_MULLHWU:
-+        println("\t{}.u64 = uint64_t({}.u32 & 0xFFFF) * uint64_t({}.u32 & 0xFFFF);", r(insn.operands[0]), r(insn.operands[1]), r(insn.operands[2]));
-+        if (strchr(insn.opcode->name, '.'))
-+            println("\t{}.compare<int32_t>({}.s32, 0, {});", cr(0), r(insn.operands[0]), xer());
++    {
++        // Not a PowerPC 440 instruction on the Xbox 360: the disassembler takes
++        // VMX128 vsldoi128 (opcode 4, bit 0x10 set) for mullhwu. Decoded here
++        // with Xenia's VX128_5 layout.
++        const uint32_t w = insn.instruction;
++        const uint32_t vd = ((w >> 21) & 0x1F) | (((w >> 2) & 0x3) << 5);
++        const uint32_t va = ((w >> 16) & 0x1F) | (((w >> 5) & 0x1) << 5) | (((w >> 10) & 0x1) << 6);
++        const uint32_t vb = ((w >> 11) & 0x1F) | ((w & 0x3) << 5);
++        const uint32_t sh = (w >> 6) & 0xF;
++        println("\tsimde_mm_store_si128((simde__m128i*){}.u8, simde_mm_alignr_epi8(simde_mm_load_si128((simde__m128i*){}.u8), simde_mm_load_si128((simde__m128i*){}.u8), {}));", v(vd), v(va), v(vb), 16 - sh);
 +        break;
++    }
 +
      case PPC_INST_VSUBUBS:
          println("\tsimde_mm_store_si128((simde__m128i*){}.u8, simde_mm_subs_epu8(simde_mm_load_si128((simde__m128i*){}.u8), simde_mm_load_si128((simde__m128i*){}.u8)));", v(insn.operands[0]), v(insn.operands[1]), v(insn.operands[2]));
          break;
-@@ -2212,6 +2469,20 @@ bool Recompiler::Recompile(
+@@ -2212,6 +2477,20 @@ bool Recompiler::Recompile(
              println("\t{} = {};", v(insn.operands[0]), vTemp());
              break;
  
