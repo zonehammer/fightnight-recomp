@@ -5,7 +5,7 @@
 // pointer and a few unwound return addresses are recorded, and it is resumed.
 // On stop, profile.txt gets per-thread totals and the most frequent call
 // chains as module-relative addresses; tools/resolve_profile.py turns those
-// into function names with the linker map (build/runtime/ConanRecomp.map), where
+// into function names with the linker map (build/runtime/FightNightRecomp.map), where
 // recompiled guest functions appear as __imp__sub_XXXXXXXX.
 #include "profiler.h"
 #include "kernel/threads.h"

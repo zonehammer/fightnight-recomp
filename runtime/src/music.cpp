@@ -1,4 +1,4 @@
-// Your own music instead of the game's (music_mode in conan.ini, F1 General).
+// Your own music instead of the game's (music_mode in fightnight.ini, F1 General).
 //
 // Songs come from a folder (music_folder, or "music" next to the game): MP3,
 // M4A / AAC, FLAC, WAV and WMA, decoded by Windows (Media Foundation) and played
@@ -79,7 +79,7 @@ namespace wet::music
         std::atomic<int64_t> s_gameClosedAt{ -1000000 };   // ms since start (never yet)
         const Clock::time_point s_start = Clock::now();
 
-        // Paths as UTF-8 text (the folder in conan.ini, the overlay, the log).
+        // Paths as UTF-8 text (the folder in fightnight.ini, the overlay, the log).
         std::string Utf8(const fs::path& p)
         {
             auto u = p.u8string();

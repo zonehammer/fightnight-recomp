@@ -1,5 +1,5 @@
 // Keyboard bindings shared by the runtime, the F1 overlay and the launcher:
-// the actions that can be bound (conan.ini key_<action> = KEY[, KEY]) and the key
+// the actions that can be bound (fightnight.ini key_<action> = KEY[, KEY]) and the key
 // names. Plain data, no <windows.h> (the values are Windows virtual-key codes).
 #pragma once
 #include <cctype>
@@ -12,7 +12,7 @@ namespace wet::keybinds
 {
     struct Action
     {
-        const char* id;        // conan.ini: key_<id>
+        const char* id;        // fightnight.ini: key_<id>
         const char* label;     // shown in the overlay and the launcher
         const char* fallback;  // default key(s)
     };
@@ -42,7 +42,7 @@ namespace wet::keybinds
     };
     inline constexpr int kActionCount = int(sizeof(kActions) / sizeof(kActions[0]));
 
-    // Mouse buttons (conan.ini mouse_left ... mouse_forward = a controller button).
+    // Mouse buttons (fightnight.ini mouse_left ... mouse_forward = a controller button).
     struct MouseButton { const char* id; const char* label; const char* fallback; };
     inline constexpr MouseButton kMouseButtons[5] = {
         { "mouse_left", "Left button", "RT" },       { "mouse_right", "Right button", "LT" },

@@ -1,5 +1,5 @@
-// Conan Launcher: a small settings window that edits conan.ini (the same file the
-// in-game F1 overlay uses) and starts ConanRecomp.exe. Plain Win32 controls, no
+// Fight Night Launcher: a small settings window that edits fightnight.ini (the same file the
+// in-game F1 overlay uses) and starts FightNightRecomp.exe. Plain Win32 controls, no
 // dependencies. Keys it doesn't know are kept as they are.
 #ifndef UNICODE
 #define UNICODE
@@ -37,7 +37,7 @@ namespace fs = std::filesystem;
 
 namespace
 {
-    // ---- conan.ini: the lines as they are, values updated in place ----
+    // ---- fightnight.ini: the lines as they are, values updated in place ----
     struct Ini
     {
         std::vector<std::string> lines;
@@ -100,7 +100,7 @@ namespace
             if (!out)
                 return false;
             if (lines.empty())
-                out << "# Conan Recomp options (F1 in game opens the settings overlay)\n";
+                out << "# Fight Night Recomp options (F1 in game opens the settings overlay)\n";
             for (auto& line : lines)
                 out << line << "\n";
             return bool(out);
@@ -129,7 +129,7 @@ namespace
     fs::path s_dir, s_iniPath, s_gameDir, s_hddDir;
     Ini s_ini;
 
-    // 0 = match the monitor; a rate from conan.ini that isn't listed gets its own item.
+    // 0 = match the monitor; a rate from fightnight.ini that isn't listed gets its own item.
     std::vector<int> s_fpsValues = { 30, 60, 120, 144, 165, 240, 360, 0 };
 
     int S(int v) { return int(v * s_scale + 0.5); }
@@ -271,7 +271,7 @@ namespace
         RECT owner;
         GetWindowRect(s_window, &owner);
         int w = rc.right - rc.left, h = rc.bottom - rc.top;
-        s_keysWindow = CreateWindowExW(WS_EX_DLGMODALFRAME, L"ConanLauncherKeys", L"Keyboard and mouse bindings", style,
+        s_keysWindow = CreateWindowExW(WS_EX_DLGMODALFRAME, L"FightNightLauncherKeys", L"Keyboard and mouse bindings", style,
                                        (owner.left + owner.right - w) / 2, (owner.top + owner.bottom - h) / 2, w, h,
                                        s_window, nullptr, GetModuleHandleW(nullptr), nullptr);
         s_parent = s_keysWindow;
@@ -339,7 +339,7 @@ namespace
 
     void Group(const wchar_t* title, int x, int y, int w, int h) { Make(L"BUTTON", title, BS_GROUPBOX, x, y, w, h, 0); }
 
-    // game/extracted above the launcher's folder (as ConanRecomp.exe looks for it).
+    // game/extracted above the launcher's folder (as FightNightRecomp.exe looks for it).
     fs::path FindGame()
     {
         std::error_code ec;
@@ -487,14 +487,14 @@ namespace
     void UpdateStatus()
     {
         std::wstring text;
-        if (!fs::exists(s_dir / "ConanRecomp.exe"))
-            text = L"ConanRecomp.exe is missing - the launcher must be next to it.";
+        if (!fs::exists(s_dir / "FightNightRecomp.exe"))
+            text = L"FightNightRecomp.exe is missing - the launcher must be next to it.";
         else if (s_gameDir.empty())
             text = L"Game files not found: put your extracted disc in game\\extracted (with default.xex).";
         else
             text = L"Game files: " + s_gameDir.wstring();
         SetWindowTextW(Item(kStatus), text.c_str());
-        EnableWindow(Item(kPlay), fs::exists(s_dir / "ConanRecomp.exe") && !s_gameDir.empty());
+        EnableWindow(Item(kPlay), fs::exists(s_dir / "FightNightRecomp.exe") && !s_gameDir.empty());
     }
 
     bool Checked(int id) { return SendMessageW(Item(id), BM_GETCHECK, 0, 0) == BST_CHECKED; }
@@ -538,19 +538,19 @@ namespace
         }
         s_ini.SetString("monitor", ChosenMonitor(Selected(kMonitor)));
         if (!s_ini.Save(s_iniPath))
-            MessageBoxW(s_window, L"Could not save conan.ini.", L"Conan Launcher", MB_ICONERROR);
+            MessageBoxW(s_window, L"Could not save fightnight.ini.", L"Fight Night Launcher", MB_ICONERROR);
     }
 
     void Play()
     {
         SaveSettings();
-        std::wstring exe = (s_dir / "ConanRecomp.exe").wstring();
+        std::wstring exe = (s_dir / "FightNightRecomp.exe").wstring();
         std::wstring cmd = L"\"" + exe + L"\"";
         STARTUPINFOW si{ sizeof(si) };
         PROCESS_INFORMATION pi{};
         if (!CreateProcessW(exe.c_str(), cmd.data(), nullptr, nullptr, FALSE, 0, nullptr, s_dir.c_str(), &si, &pi))
         {
-            MessageBoxW(s_window, L"Could not start ConanRecomp.exe.", L"Conan Launcher", MB_ICONERROR);
+            MessageBoxW(s_window, L"Could not start FightNightRecomp.exe.", L"Fight Night Launcher", MB_ICONERROR);
             return;
         }
         CloseHandle(pi.hThread);
@@ -559,10 +559,10 @@ namespace
     }
 
     // ---- Saves: back up and import ----
-    // The saves are game\hdd\content\545107DA\00000001 (one folder per save,
+    // The saves are game\hdd\content\45410915\00000001 (one folder per save,
     // save1 ..., holding header.hdr and the game's .nsg files, plus save1.name),
     // the achievements game\hdd\achievements.ini.
-    fs::path SaveFolder() { return s_hddDir / L"content" / L"545107DA" / L"00000001"; }
+    fs::path SaveFolder() { return s_hddDir / L"content" / L"45410915" / L"00000001"; }
 
     // A save folder: holds the game's .nsg files.
     bool IsSaveDir(const fs::path& dir)
@@ -636,11 +636,11 @@ namespace
     {
         if (!HaveSaves())
         {
-            MessageBoxW(s_window, L"There are no saves yet.", L"Conan Launcher", MB_ICONINFORMATION);
+            MessageBoxW(s_window, L"There are no saves yet.", L"Fight Night Launcher", MB_ICONINFORMATION);
             return;
         }
         wchar_t file[MAX_PATH] = {};
-        std::wstring name = L"Conan-saves-" + Stamp() + L".zip";
+        std::wstring name = L"FightNight-saves-" + Stamp() + L".zip";
         wcsncpy(file, name.c_str(), MAX_PATH - 1);
         wchar_t docs[MAX_PATH] = {};
         SHGetFolderPathW(nullptr, CSIDL_PERSONAL, nullptr, 0, docs);
@@ -658,11 +658,11 @@ namespace
         {
             std::wstring select = L"/select,\"" + std::wstring(file) + L"\"";
             ShellExecuteW(s_window, L"open", L"explorer.exe", select.c_str(), nullptr, SW_SHOWNORMAL);
-            MessageBoxW(s_window, (L"Saves and achievements backed up to\n" + std::wstring(file)).c_str(), L"Conan Launcher",
+            MessageBoxW(s_window, (L"Saves and achievements backed up to\n" + std::wstring(file)).c_str(), L"Fight Night Launcher",
                         MB_ICONINFORMATION);
         }
         else
-            MessageBoxW(s_window, L"Couldn't make the backup.", L"Conan Launcher", MB_ICONWARNING);
+            MessageBoxW(s_window, L"Couldn't make the backup.", L"Fight Night Launcher", MB_ICONWARNING);
     }
 
     // The folder holding the saves in `dir`: the parent of the first save folder
@@ -711,7 +711,7 @@ namespace
             DWORD opts = 0;
             dlg->GetOptions(&opts);
             dlg->SetOptions(opts | FOS_PICKFOLDERS);
-            dlg->SetTitle(L"The folder with your Conan saves (a save folder, or one above it, e.g. Xenia's content folder)");
+            dlg->SetTitle(L"The folder with your Fight Night saves (a save folder, or one above it, e.g. Xenia's content folder)");
             IShellItem* item = nullptr;
             if (SUCCEEDED(dlg->Show(s_window)) && SUCCEEDED(dlg->GetResult(&item)))
             {
@@ -735,11 +735,11 @@ namespace
         {
             wchar_t tmp[MAX_PATH];
             GetTempPathW(MAX_PATH, tmp);
-            temp = fs::path(tmp) / (L"conan-save-import-" + Stamp());
+            temp = fs::path(tmp) / (L"fightnight-save-import-" + Stamp());
             fs::remove_all(temp, ec);
             if (!PowerShell(L"Expand-Archive -Force -Path '" + source.wstring() + L"' -DestinationPath '" + temp.wstring() + L"'"))
             {
-                MessageBoxW(s_window, L"Couldn't open that zip.", L"Conan Launcher", MB_ICONWARNING);
+                MessageBoxW(s_window, L"Couldn't open that zip.", L"Fight Night Launcher", MB_ICONWARNING);
                 return;
             }
             from = temp;
@@ -749,8 +749,8 @@ namespace
         {
             fs::remove_all(temp, ec);
             MessageBoxW(s_window,
-                        L"No Conan saves found there (a save folder with .nsg files).",
-                        L"Conan Launcher", MB_ICONWARNING);
+                        L"No Fight Night saves found there (a save folder with .nsg files).",
+                        L"Fight Night Launcher", MB_ICONWARNING);
             return;
         }
         // Our own backup also has achievements.ini at its top.
@@ -762,7 +762,7 @@ namespace
                          L" are replaced. They're backed up first to game\\hdd\\save-backups. Close the game before "
                          L"importing.")
                             .c_str(),
-                        L"Conan Launcher", MB_YESNO | MB_ICONQUESTION) != IDYES)
+                        L"Fight Night Launcher", MB_YESNO | MB_ICONQUESTION) != IDYES)
         {
             fs::remove_all(temp, ec);
             return;
@@ -770,7 +770,7 @@ namespace
         if (HaveSaves() && !BackupTo(s_hddDir / L"save-backups" / (L"before-import-" + Stamp() + L".zip")))
         {
             fs::remove_all(temp, ec);
-            MessageBoxW(s_window, L"Couldn't back up the current saves, so nothing was imported.", L"Conan Launcher",
+            MessageBoxW(s_window, L"Couldn't back up the current saves, so nothing was imported.", L"Fight Night Launcher",
                         MB_ICONWARNING);
             return;
         }
@@ -783,7 +783,7 @@ namespace
             fs::copy_file(achievements, s_hddDir / L"achievements.ini", fs::copy_options::overwrite_existing, ec);
         fs::remove_all(temp, ec);
         MessageBoxW(s_window, ok ? L"Saves imported." : L"Some files couldn't be copied (is the game running?).",
-                    L"Conan Launcher", ok ? MB_ICONINFORMATION : MB_ICONWARNING);
+                    L"Fight Night Launcher", ok ? MB_ICONINFORMATION : MB_ICONWARNING);
     }
 
     // ---- Free up space: what only building needed (launcher/maintenance.h) ----
@@ -808,7 +808,7 @@ namespace
             }
         if (!total)
         {
-            MessageBoxW(s_window, L"Nothing to clean up.", L"Conan Launcher", MB_ICONINFORMATION);
+            MessageBoxW(s_window, L"Nothing to clean up.", L"Fight Night Launcher", MB_ICONINFORMATION);
             return;
         }
         if (MessageBoxW(s_window,
@@ -816,14 +816,14 @@ namespace
                          L". The game keeps working, and your saves and settings stay. The next update downloads the "
                          L"tools again and rebuilds from scratch, so it takes as long as the first install.")
                             .c_str(),
-                        L"Conan Launcher - free up space", MB_YESNO | MB_ICONQUESTION) != IDYES)
+                        L"Fight Night Launcher - free up space", MB_YESNO | MB_ICONQUESTION) != IDYES)
             return;
         bool ok = true;
         for (auto& p : parts)
             ok &= wet::maintenance::Delete(p);
         MessageBoxW(s_window, ok ? (L"Freed " + wet::maintenance::Size(total) + L".").c_str()
                                  : L"Some files couldn't be deleted (is something using them?).",
-                    L"Conan Launcher", ok ? MB_ICONINFORMATION : MB_ICONWARNING);
+                    L"Fight Night Launcher", ok ? MB_ICONINFORMATION : MB_ICONWARNING);
     }
 
     // A small menu under a button.
@@ -852,17 +852,17 @@ namespace
         std::error_code ec;
         if (!fs::exists(dir, ec))
         {
-            MessageBoxW(s_window, L"The shader cache is already empty.", L"Conan Launcher", MB_ICONINFORMATION);
+            MessageBoxW(s_window, L"The shader cache is already empty.", L"Fight Night Launcher", MB_ICONINFORMATION);
             return;
         }
         if (MessageBoxW(s_window,
                         L"Delete the shader cache?\n\nIt is rebuilt as you play; effects stutter once more the "
                         L"first time they appear.",
-                        L"Conan Launcher", MB_YESNO | MB_ICONQUESTION) != IDYES)
+                        L"Fight Night Launcher", MB_YESNO | MB_ICONQUESTION) != IDYES)
             return;
         fs::remove_all(dir, ec);
         MessageBoxW(s_window, ec ? L"Some files could not be deleted (is the game running?)." : L"Shader cache cleared.",
-                    L"Conan Launcher", ec ? MB_ICONWARNING : MB_ICONINFORMATION);
+                    L"Fight Night Launcher", ec ? MB_ICONWARNING : MB_ICONINFORMATION);
     }
 
     // ---- Update check: the latest release on GitHub vs. this build ----
@@ -871,7 +871,7 @@ namespace
     std::string HttpsGet(const wchar_t* host, const wchar_t* path)
     {
         std::string body;
-        HINTERNET session = WinHttpOpen(L"Conan-Launcher", WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, WINHTTP_NO_PROXY_NAME,
+        HINTERNET session = WinHttpOpen(L"FightNight-Launcher", WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, WINHTTP_NO_PROXY_NAME,
                                         WINHTTP_NO_PROXY_BYPASS, 0);
         if (!session)
             return body;
@@ -932,15 +932,15 @@ namespace
     void UpdateNow()
     {
         fs::path repo = s_dir.parent_path().parent_path();   // <repo>\build\runtime
-        fs::path setup = s_dir / L"ConanSetup.exe";
+        fs::path setup = s_dir / L"FightNightSetup.exe";
         std::error_code ec;
         if (!fs::exists(repo / L".git", ec) || !fs::exists(setup, ec))
         {
             MessageBoxW(s_window,
-                        L"This copy can't update itself (it isn't a built source folder with ConanSetup.exe). Download "
-                        L"ConanSetup.exe from the GitHub releases page and run it.",
-                        L"Conan Launcher", MB_ICONINFORMATION);
-            ShellExecuteW(s_window, L"open", L"https://github.com/zonehammer/conan-recomp/releases/latest", nullptr,
+                        L"This copy can't update itself (it isn't a built source folder with FightNightSetup.exe). Download "
+                        L"FightNightSetup.exe from the GitHub releases page and run it.",
+                        L"Fight Night Launcher", MB_ICONINFORMATION);
+            ShellExecuteW(s_window, L"open", L"https://github.com/zonehammer/fightnight-recomp/releases/latest", nullptr,
                           nullptr, SW_SHOWNORMAL);
             return;
         }
@@ -948,19 +948,19 @@ namespace
                         L"Update to the latest version?\n\nThe launcher closes, Setup downloads the new code and "
                         L"rebuilds (a few minutes, longer if the tools have to be downloaded again), then the launcher "
                         L"opens again. Your saves and settings stay. Close the game first.",
-                        L"Conan Launcher", MB_YESNO | MB_ICONQUESTION) != IDYES)
+                        L"Fight Night Launcher", MB_YESNO | MB_ICONQUESTION) != IDYES)
             return;
         SaveSettings();
         wchar_t tmp[MAX_PATH];
         GetTempPathW(MAX_PATH, tmp);
-        fs::path copy = fs::path(tmp) / L"ConanSetup-update.exe";
+        fs::path copy = fs::path(tmp) / L"FightNightSetup-update.exe";
         fs::copy_file(setup, copy, fs::copy_options::overwrite_existing, ec);
         std::wstring cmd = L"\"" + copy.wstring() + L"\" --update \"" + repo.parent_path().wstring() + L"\"";
         STARTUPINFOW si{ sizeof(si) };
         PROCESS_INFORMATION pi{};
         if (ec || !CreateProcessW(nullptr, cmd.data(), nullptr, nullptr, FALSE, 0, nullptr, tmp, &si, &pi))
         {
-            MessageBoxW(s_window, L"Couldn't start Setup for the update.", L"Conan Launcher", MB_ICONWARNING);
+            MessageBoxW(s_window, L"Couldn't start Setup for the update.", L"Fight Night Launcher", MB_ICONWARNING);
             return;
         }
         CloseHandle(pi.hThread);
@@ -978,7 +978,7 @@ namespace
         SetWindowTextW(Item(kUpdateText), L"Checking...");
         EnableWindow(Item(kCheckUpdates), FALSE);
         std::thread([] {
-            std::string json = HttpsGet(L"api.github.com", L"/repos/zonehammer/conan-recomp/releases/latest");
+            std::string json = HttpsGet(L"api.github.com", L"/repos/zonehammer/fightnight-recomp/releases/latest");
             std::wstring* text = new std::wstring;
             size_t at = json.find("\"tag_name\"");
             size_t q1 = at == std::string::npos ? at : json.find('"', json.find(':', at) + 1);
@@ -1002,7 +1002,7 @@ namespace
         }).detach();
     }
 
-    // ---- Bug report: conan.log, conan.ini, xenia_gpu.log and system info in a zip ----
+    // ---- Bug report: fightnight.log, fightnight.ini, xenia_gpu.log and system info in a zip ----
     std::wstring RegString(const wchar_t* key, const wchar_t* value)
     {
         wchar_t buf[256] = {};
@@ -1018,12 +1018,12 @@ namespace
         fs::path dir = s_dir / L"bug-report";
         fs::remove_all(dir, ec);
         fs::create_directories(dir, ec);
-        for (const wchar_t* name : { L"conan.log", L"conan.ini", L"xenia_gpu.log", L"profile.txt" })
+        for (const wchar_t* name : { L"fightnight.log", L"fightnight.ini", L"xenia_gpu.log", L"profile.txt" })
             if (fs::exists(s_dir / name, ec))
                 fs::copy_file(s_dir / name, dir / name, fs::copy_options::overwrite_existing, ec);
         {
             std::wofstream info(dir / L"system.txt");
-            info << L"Conan Recomp " << std::wstring(WET_VERSION, WET_VERSION + std::strlen(WET_VERSION)) << L"\n";
+            info << L"Fight Night Recomp " << std::wstring(WET_VERSION, WET_VERSION + std::strlen(WET_VERSION)) << L"\n";
             const wchar_t* nt = L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion";
             info << L"Windows: " << RegString(nt, L"ProductName") << L" " << RegString(nt, L"DisplayVersion")
                  << L" build " << RegString(nt, L"CurrentBuild") << L"\n";
@@ -1041,7 +1041,7 @@ namespace
         SYSTEMTIME t;
         GetLocalTime(&t);
         wchar_t name[64];
-        std::swprintf(name, 64, L"Conan-bug-report-%04d%02d%02d-%02d%02d.zip", t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute);
+        std::swprintf(name, 64, L"FightNight-bug-report-%04d%02d%02d-%02d%02d.zip", t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute);
         fs::path zip = s_dir / name;
         std::wstring cmd = L"powershell -NoProfile -NonInteractive -Command \"Compress-Archive -Force -Path '" +
                            (dir / L"*").wstring() + L"' -DestinationPath '" + zip.wstring() + L"'\"";
@@ -1060,7 +1060,7 @@ namespace
         if (!ok || !fs::exists(zip, ec))
         {
             MessageBoxW(s_window, (L"Couldn't make the zip. The files are in:\n" + dir.wstring()).c_str(),
-                        L"Conan Launcher", MB_ICONWARNING);
+                        L"Fight Night Launcher", MB_ICONWARNING);
             ShellExecuteW(s_window, L"open", dir.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
             return;
         }
@@ -1072,12 +1072,12 @@ namespace
                          L" (logs, settings and system info - nothing else).\n\nOpen the GitHub issue page to "
                          L"report the bug? Attach the zip and describe what happened.")
                             .c_str(),
-                        L"Conan Launcher", MB_YESNO | MB_ICONINFORMATION) == IDYES)
-            ShellExecuteW(s_window, L"open", L"https://github.com/zonehammer/conan-recomp/issues/new", nullptr, nullptr,
+                        L"Fight Night Launcher", MB_YESNO | MB_ICONINFORMATION) == IDYES)
+            ShellExecuteW(s_window, L"open", L"https://github.com/zonehammer/fightnight-recomp/issues/new", nullptr, nullptr,
                           SW_SHOWNORMAL);
     }
 
-    // ---- Monitor choice (conan.ini monitor = \\.\DISPLAYn; empty = the main display) ----
+    // ---- Monitor choice (fightnight.ini monitor = \\.\DISPLAYn; empty = the main display) ----
     std::vector<std::wstring> s_monitors;   // device names, in the combo's order after "Main display"
 
     void FillMonitors(HWND combo, const std::string& chosen)
@@ -1152,7 +1152,7 @@ namespace
         std::ifstream in(s_hddDir / "achievements_list.txt");
         if (!in)
         {
-            MessageBoxW(s_window, L"No achievements list yet: start the game once and it is written.", L"Conan Launcher",
+            MessageBoxW(s_window, L"No achievements list yet: start the game once and it is written.", L"Fight Night Launcher",
                         MB_ICONINFORMATION);
             return;
         }
@@ -1201,7 +1201,7 @@ namespace
         std::stable_sort(rows.begin(), rows.end(), [](const Row& x, const Row& y) { return x.unlocked > y.unlocked; });
         wchar_t title[128];
         std::swprintf(title, 128, L"Achievements: %d of %d, %d of %d G", got, total, pts, totalPts);
-        HWND w = OpenTool(L"ConanLauncherTool", title, 640, 420);
+        HWND w = OpenTool(L"FightNightLauncherTool", title, 640, 420);
         HWND list = CreateWindowExW(WS_EX_CLIENTEDGE, WC_LISTVIEWW, L"", WS_CHILD | WS_VISIBLE | LVS_REPORT | LVS_NOSORTHEADER,
                                     S(8), S(8), S(624), S(404), w, nullptr, GetModuleHandleW(nullptr), nullptr);
         SendMessageW(list, WM_SETFONT, WPARAM(s_font), TRUE);
@@ -1333,7 +1333,7 @@ namespace
         if (!s_xinput)
             if (HMODULE x = LoadLibraryW(L"xinput1_4.dll"); x || (x = LoadLibraryW(L"xinput9_1_0.dll")))
                 s_xinput = reinterpret_cast<XInputGetStateFn>(reinterpret_cast<void*>(GetProcAddress(x, "XInputGetState")));
-        HWND w = OpenTool(L"ConanLauncherTool", L"Controller test", 460, 300);
+        HWND w = OpenTool(L"FightNightLauncherTool", L"Controller test", 460, 300);
         HWND t = CreateWindowExW(0, L"STATIC", L"", WS_CHILD | WS_VISIBLE | SS_LEFT, S(12), S(10), S(436), S(280), w,
                                  reinterpret_cast<HMENU>(intptr_t(kPadText)), GetModuleHandleW(nullptr), nullptr);
         HFONT mono = CreateFontW(-S(13), 0, 0, 0, FW_NORMAL, 0, 0, 0, DEFAULT_CHARSET, 0, 0, CLEARTYPE_QUALITY,
@@ -1361,8 +1361,8 @@ namespace
                               { L"30 (original)", L"60", L"120", L"144", L"165", L"240", L"360", L"Match monitor" }, 0);
         if (fpsIndex < 0)
         {
-            // A custom rate from conan.ini: keep it as its own choice.
-            std::wstring text = std::to_wstring(fps) + L" (conan.ini)";
+            // A custom rate from fightnight.ini: keep it as its own choice.
+            std::wstring text = std::to_wstring(fps) + L" (fightnight.ini)";
             SendMessageW(fpsCombo, CB_ADDSTRING, 0, LPARAM(text.c_str()));
             s_fpsValues.push_back(fps);
             fpsIndex = int(s_fpsValues.size()) - 1;
@@ -1529,10 +1529,10 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show)
     wchar_t self[MAX_PATH];
     GetModuleFileNameW(nullptr, self, MAX_PATH);
     s_dir = fs::path(self).parent_path();
-    s_iniPath = s_dir / "conan.ini";
+    s_iniPath = s_dir / "fightnight.ini";
     s_gameDir = FindGame();
     s_hddDir = s_gameDir.empty() ? s_dir / "game" / "hdd" : s_gameDir.parent_path() / "hdd";
-    // First start (no conan.ini yet): resolution and anti-aliasing to suit the
+    // First start (no fightnight.ini yet): resolution and anti-aliasing to suit the
     // graphics card, rather than the same for every PC.
     std::wstring firstStartNote;
     if (!fs::exists(s_iniPath))
@@ -1560,16 +1560,16 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show)
     wc.hInstance = instance;
     wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
     wc.hbrBackground = GetSysColorBrush(COLOR_WINDOW);
-    wc.lpszClassName = L"ConanLauncher";
+    wc.lpszClassName = L"FightNightLauncher";
     wc.hIcon = LoadIconW(instance, MAKEINTRESOURCEW(1));
     RegisterClassExW(&wc);
     WNDCLASSEXW kc = wc;
     kc.lpfnWndProc = KeysProc;
-    kc.lpszClassName = L"ConanLauncherKeys";
+    kc.lpszClassName = L"FightNightLauncherKeys";
     RegisterClassExW(&kc);
     WNDCLASSEXW tc = wc;
     tc.lpfnWndProc = ToolProc;
-    tc.lpszClassName = L"ConanLauncherTool";
+    tc.lpszClassName = L"FightNightLauncherTool";
     RegisterClassExW(&tc);
 
     CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
@@ -1590,7 +1590,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show)
     DWORD style = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
     AdjustWindowRect(&rc, style, FALSE);
     int w = rc.right - rc.left, h = rc.bottom - rc.top;
-    std::wstring title = L"Conan Recomp " + std::wstring(WET_VERSION, WET_VERSION + std::strlen(WET_VERSION));
+    std::wstring title = L"Fight Night Recomp " + std::wstring(WET_VERSION, WET_VERSION + std::strlen(WET_VERSION));
     s_window = CreateWindowExW(0, wc.lpszClassName, title.c_str(), style,
                                (GetSystemMetrics(SM_CXSCREEN) - w) / 2, (GetSystemMetrics(SM_CYSCREEN) - h) / 2, w, h,
                                nullptr, nullptr, instance, nullptr);

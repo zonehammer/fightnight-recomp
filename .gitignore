@@ -16,7 +16,7 @@
 *.log
 __pycache__/
 /frames/
-/conan.ini
+/fightnight.ini
 /profile.txt
 
 # ---- Packaged builds (contain code translated from the game) ----

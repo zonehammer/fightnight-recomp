@@ -490,7 +490,7 @@ using namespace wet;
     LogFatal("  If this address is real code, add it to config/WET_config.toml `functions` and recompile.");
     LogCrashContext();
     LogFlush();
-    os::ShowFatalMessage("Conan Recomp stopped (the game called code that wasn't recompiled).\n\nThe details are at the end of conan.log.");
+    os::ShowFatalMessage("Fight Night Recomp stopped (the game called code that wasn't recompiled).\n\nThe details are at the end of fightnight.log.");
     os::ExitProcess(1);
 }
 

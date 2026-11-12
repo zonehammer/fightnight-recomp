@@ -9,7 +9,7 @@
 //     write to a candidate records the host instruction, which the linker map turns
 //     into the guest function (the camera update) - tools/resolve_profile.py style.
 //
-// Results go to camscan.txt and conan.log. Windows only.
+// Results go to camscan.txt and fightnight.log. Windows only.
 #include "camscan.h"
 #include "input.h"
 #include "kernel/kernel.h"
@@ -390,7 +390,7 @@ namespace wet::camscan
                 s_running = false;
                 return;
             }
-            std::fprintf(report, "# Conan Recomp camera scan (F7)\n");
+            std::fprintf(report, "# Fight Night Recomp camera scan (F7)\n");
             auto yaw = ScanAxis(false, report);
             auto pitch = ScanAxis(true, report);
             WatchWriters(yaw, pitch, report);

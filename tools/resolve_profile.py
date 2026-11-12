@@ -2,7 +2,7 @@
 """Turns profile.txt (written by the runtime's F10 / WET_PROFILE profiler) into
 a readable report using the linker map.
 
-usage: resolve_profile.py [profile.txt] [build/runtime/ConanRecomp.map] [--top N]
+usage: resolve_profile.py [profile.txt] [build/runtime/FightNightRecomp.map] [--top N]
 
 For every thread it lists where samples landed (self), which functions were on
 the stack (inclusive), and the innermost recompiled guest function (sub_XXXXXXXX)
@@ -64,7 +64,7 @@ def main():
         top = int(sys.argv[sys.argv.index("--top") + 1])
         args = [a for a in args if a != str(top)]
     prof = args[0] if args else "profile.txt"
-    mp = args[1] if len(args) > 1 else "build/runtime/ConanRecomp.map"
+    mp = args[1] if len(args) > 1 else "build/runtime/FightNightRecomp.map"
     addrs, names = load_map(mp)
     cache = {}
 

@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2026 zonehammer and the Conan Recompiled contributors
+Copyright (c) 2026 zonehammer and the Fight Night Champion Recompiled contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -21,11 +21,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 -------------------------------------------------------------------------------
-This licence covers the Conan Recompiled source code in this repository (runtime/,
+This licence covers the Fight Night Champion Recompiled source code in this repository (runtime/,
 launcher/, tools/, cmake/, config/, ci/ and the patch files in patches/). It does
 not cover:
 
-- Conan itself. The game, its code and its assets belong to their owners and are
+- Fight Night Champion itself. The game, its code and its assets belong to their owners and are
   not part of this repository; you need your own copy.
 - The third-party projects used as git submodules, which keep their own
   licences: XenonRecomp (MIT), Xenia (BSD 3-clause), SDL2 (zlib),

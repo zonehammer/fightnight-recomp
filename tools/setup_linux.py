@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-"""Set up and build Conan Recompiled on Linux (Steam Deck, Bazzite, other distros).
+"""Set up and build Fight Night Champion Recompiled on Linux (Steam Deck, Bazzite, other distros).
 
-    python3 setup_linux.py --iso ~/Games/Conan.iso            # first time
+    python3 setup_linux.py --iso ~/Games/FightNight.iso            # first time
     python3 setup_linux.py                                   # later: update and rebuild
 
 The game is built as a Windows program and runs with Proton (or Wine). Nothing
 is installed system-wide and no root is needed: the tools that aren't already
 there (CMake, Ninja, llvm-mingw for the Windows build, a C++ compiler for the
 recompiler) are downloaded into <folder>/tools, the source goes into
-<folder>/conan-recomp, and tools/build.py builds it from your disc.
+<folder>/fightnight-recomp, and tools/build.py builds it from your disc.
 Needs git and python3 (both come with SteamOS and Bazzite).
 
-Afterwards add <folder>/conan-recomp/build/windows/runtime/ConanLauncher.exe to
+Afterwards add <folder>/fightnight-recomp/build/windows/runtime/FightNightLauncher.exe to
 Steam (Games > Add a Non-Steam Game) and force Proton in its Compatibility
 settings. In Desktop Mode on the Deck: run this from Konsole.
 """
@@ -29,7 +29,7 @@ import tarfile
 import urllib.request
 import zipfile
 
-REPO_URL = "https://github.com/zonehammer/conan-recomp.git"
+REPO_URL = "https://github.com/zonehammer/fightnight-recomp.git"
 API = "https://api.github.com/repos/"
 
 
@@ -38,7 +38,7 @@ def say(msg):
 
 
 def fetch(url, what=None):
-    req = urllib.request.Request(url, headers={"User-Agent": "Conan-Setup", "Accept": "application/octet-stream, */*"})
+    req = urllib.request.Request(url, headers={"User-Agent": "FightNight-Setup", "Accept": "application/octet-stream, */*"})
     with urllib.request.urlopen(req, timeout=60) as r:
         total = int(r.headers.get("Content-Length") or 0)
         data = io.BytesIO()
@@ -133,21 +133,21 @@ def run(cmd, **kw):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--iso", help="your Conan disc image (only needed the first time)")
-    ap.add_argument("--dir", default=os.path.expanduser("~/Conan-Recomp"), help="install folder (default ~/Conan-Recomp)")
+    ap.add_argument("--iso", help="your Fight Night Champion disc image (only needed the first time)")
+    ap.add_argument("--dir", default=os.path.expanduser("~/FightNight-Recomp"), help="install folder (default ~/FightNight-Recomp)")
     ap.add_argument("--branch", help="build this branch / tag instead of the latest release")
     args = ap.parse_args()
     if platform.machine() not in ("x86_64", "AMD64"):
-        sys.exit("Conan Recompiled needs an x86-64 PC.")
+        sys.exit("Fight Night Champion Recompiled needs an x86-64 PC.")
     if not shutil.which("git"):
         sys.exit("git is needed (it comes with SteamOS and Bazzite; elsewhere install it with your package manager).")
 
     root = os.path.abspath(args.dir)
     tools = os.path.join(root, "tools")
-    repo = os.path.join(root, "conan-recomp")
+    repo = os.path.join(root, "fightnight-recomp")
     os.makedirs(tools, exist_ok=True)
     if not args.iso and not os.path.exists(os.path.join(repo, "game", "extracted", "default.xex")):
-        sys.exit("Pass your disc image the first time: python3 setup_linux.py --iso /path/to/Conan.iso")
+        sys.exit("Pass your disc image the first time: python3 setup_linux.py --iso /path/to/FightNight.iso")
     if args.iso and not os.path.exists(args.iso):
         sys.exit(f"{args.iso} doesn't exist.")
     free = shutil.disk_usage(root).free >> 30
@@ -192,7 +192,7 @@ def main():
     ref = args.branch
     if not ref:
         try:
-            ref = json.loads(fetch(API + "zonehammer/conan-recomp/releases/latest"))["tag_name"]
+            ref = json.loads(fetch(API + "zonehammer/fightnight-recomp/releases/latest"))["tag_name"]
         except Exception:
             ref = "main"
     if run(["git", "-C", repo, "checkout", "--force", ref], env=env) != 0:
@@ -208,7 +208,7 @@ def main():
     if run(cmd, cwd=repo, env=env) != 0:
         sys.exit("The build failed; the output above says why.")
 
-    launcher = os.path.join(repo, "build", "windows", "runtime", "ConanLauncher.exe")
+    launcher = os.path.join(repo, "build", "windows", "runtime", "FightNightLauncher.exe")
     print(f"""
 Done. To play:
   1. Steam > Games > Add a Non-Steam Game to My Library > Browse, and pick

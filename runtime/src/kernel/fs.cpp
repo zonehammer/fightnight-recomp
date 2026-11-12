@@ -173,7 +173,7 @@ namespace
     // Video mode: while a Bink movie (.bik) is open the game runs at 30 FPS with
     // every kernel change waking every waiter. At full speed the movie decoder and
     // the GPU emulation race, and the top of the video flickers; this timing
-    // avoids it. conan.ini video_mode = 0 turns it off.
+    // avoids it. fightnight.ini video_mode = 0 turns it off.
     std::atomic<int> s_openVideos{ 0 };
 
     // Startup logo movies open now (input.cpp presses A through them with skip_intro).
@@ -367,12 +367,12 @@ namespace
         };
         if (!r.ok)
             return fail(STATUS_OBJECT_PATH_NOT_FOUND);
-#if !GAME_WET
+#if GAME_CONAN
         // Diagnostics: which game code opens a menu (to find the pause state).
         if (guest.find("NSI_UI_") != std::string::npos)
             Log("UI: \"%s\" opened%s", guest.c_str(), CurrentGuestStack().c_str());
 #endif
-#if !GAME_WET
+#if GAME_CONAN
         // Button prompt sheets: PlayStation or keyboard / mouse art (prompts.cpp).
         if (!r.device->writable && disposition == OPEN)
             r.host = prompts::SubstituteTexture(r.host, s_hddDir);

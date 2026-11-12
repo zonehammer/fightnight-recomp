@@ -1,4 +1,4 @@
-// Player options, kept in conan.ini next to the logs (key = value lines).
+// Player options, kept in fightnight.ini next to the logs (key = value lines).
 // Changed in game with the F1 settings overlay (gpu/xenia_bridge.cpp) or hotkeys.
 #pragma once
 #include <string>
@@ -36,10 +36,10 @@ namespace wet::options
     int Filter();
     void SetFilter(int v);
     // NVIDIA Image Scaling sharpness, 0-100.
-    // Adaptive write watching (memory.cpp), conan.ini adaptive_watch.
+    // Adaptive write watching (memory.cpp), fightnight.ini adaptive_watch.
     // Render thread sleeps instead of spinning on GPU fences (gpu_wait.cpp).
-    // Controller rumble (conan.ini vibration).
-    // "Achievement unlocked" pop-ups (conan.ini achievement_popups).
+    // Controller rumble (fightnight.ini vibration).
+    // "Achievement unlocked" pop-ups (fightnight.ini achievement_popups).
     bool AchievementPopups();
     void SetAchievementPopups(bool v);
     bool Vibration();
@@ -52,16 +52,16 @@ namespace wet::options
     bool RefreshGpuMemory();
     void SetRefreshGpuMemory(bool v);
     void SetAdaptiveWatchOption(bool v);
-    // The game's film grain, 0-100 % (conan.ini film_grain).
+    // The game's film grain, 0-100 % (fightnight.ini film_grain).
     // Mouse aim (input.cpp): the mouse drives the right stick; buttons are bound
     // to pad buttons by name (0 left, 1 right, 2 middle, 3 back, 4 forward).
-    // Shader / pipeline cache in <hdd>/shaders (conan.ini shader_cache; restart).
+    // Shader / pipeline cache in <hdd>/shaders (fightnight.ini shader_cache; restart).
     bool ShaderCache();
-    // Skip draws whose shader is still compiling instead of waiting (conan.ini async_shaders).
+    // Skip draws whose shader is still compiling instead of waiting (fightnight.ini async_shaders).
     bool AsyncShaders();
     void SetAsyncShaders(bool v);
     // Build every cached shader before the first frame instead of in the
-    // background while the game starts (conan.ini shader_preload; restart).
+    // background while the game starts (fightnight.ini shader_preload; restart).
     bool ShaderPreload();
     bool MouseAim();
     void SetMouseAim(bool v);
@@ -135,9 +135,9 @@ namespace wet::options
     void SetVsync(bool v);
     void SetHideBorders(bool v);
     // The game's motion blur, depth of field and camera shake (with its film
-    // shake), on as designed (conan.ini motion_blur / depth_of_field / camera_shake).
+    // shake), on as designed (fightnight.ini motion_blur / depth_of_field / camera_shake).
     // The game's language (Xbox language id: 1 English, 3 German, 4 French,
-    // 5 Spanish, 6 Italian - the five on the disc); conan.ini language, 0 = the
+    // 5 Spanish, 6 Italian - the five on the disc); fightnight.ini language, 0 = the
     // Windows language when it is one of those, else English. Restart.
     int Language();
     int LanguageSetting();

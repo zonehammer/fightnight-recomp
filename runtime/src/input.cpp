@@ -35,7 +35,7 @@
 // Without SDL, or if it fails to start, XInput pads (Xbox-compatible only).
 //
 // Pad 0 is the union of: the first controller, the keyboard
-// (Windows, keybinds.h and conan.ini key_*) and WET_AUTOPRESS (any platform), so the game can be
+// (Windows, keybinds.h and fightnight.ini key_*) and WET_AUTOPRESS (any platform), so the game can be
 // driven with no controller attached and in automated test runs.
 //
 // WET_AUTOPRESS: a script of steps, run in turn from WET_AUTOPRESS_DELAY seconds
@@ -325,7 +325,7 @@ namespace wet
         };
         enum { kMoveUp, kMoveDown, kMoveLeft, kMoveRight, kTriggerL = 10, kTriggerR = 11 };
 
-        // Parsed bindings, rebuilt when conan.ini / the overlay changes one.
+        // Parsed bindings, rebuilt when fightnight.ini / the overlay changes one.
         std::vector<int> s_keys[keybinds::kActionCount];
         int s_keysVersion = -1;
 

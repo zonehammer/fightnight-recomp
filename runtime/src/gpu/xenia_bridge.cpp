@@ -285,10 +285,10 @@ namespace
             {
                 uint32_t height = s_resolutionScale >= 2 ? 1080 : 720;
                 float aspect = wet::options::Widescreen() ? std::max(16.0f / 9.0f, ScreenAspect()) : 16.0f / 9.0f;
-                self->window = xe::ui::Window::Create(*self->app, "Conan (recompiled)", uint32_t(height * aspect + 0.5f),
+                self->window = xe::ui::Window::Create(*self->app, "Fight Night Champion (recompiled)", uint32_t(height * aspect + 0.5f),
                                                       height);
                 ok = self->window && (self->window->AddListener(self), self->window->Open());
-                // On the chosen display (conan.ini monitor): centred there, so
+                // On the chosen display (fightnight.ini monitor): centred there, so
                 // fullscreen (which uses the window's display) goes there too.
                 int mx, my, mw, mh;
                 if (ok && !wet::options::Monitor().empty() && wet::os::GameDisplayRect(mx, my, mw, mh))
@@ -682,7 +682,7 @@ namespace
                 capture = -1;
             }
             ImGui::SameLine();
-            ImGui::TextDisabled("Click, then press a key; right click clears. Two keys: conan.ini key_* = Q, F");
+            ImGui::TextDisabled("Click, then press a key; right click clears. Two keys: fightnight.ini key_* = Q, F");
         }
 
         // Photo mode's controls (bottom left) and messages such as "Screenshot saved"
@@ -990,7 +990,7 @@ namespace
                 ImGui::SameLine();
                 if (ImGui::Button("Next"))
                     wet::music::Next();
-                Row("Folder", "Change it in the launcher or conan.ini music_folder.");
+                Row("Folder", "Change it in the launcher or fightnight.ini music_folder.");
                 ImGui::TextDisabled("%s (%d songs)", st.folder.c_str(), st.tracks);
                 Row("");
                 if (ImGui::Button("Open the folder"))
@@ -1296,7 +1296,7 @@ namespace
             float width = std::min(em * 44, io.DisplaySize.x * 0.95f);
             ImGui::SetNextWindowSizeConstraints(ImVec2(width, 0), ImVec2(width, io.DisplaySize.y * 0.9f));
             bool open = true;
-            if (!ImGui::Begin("Conan Recompiled " WET_VERSION "###settings", &open,
+            if (!ImGui::Begin("Fight Night Champion Recompiled " WET_VERSION "###settings", &open,
                               ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize))
             {
                 ImGui::End();
@@ -1323,9 +1323,9 @@ namespace
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.55f, 0.12f, 0.13f, 1.0f));
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.75f, 0.17f, 0.18f, 1.0f));
             if (ImGui::Button("Quit to desktop"))
-                ImGui::OpenPopup("Quit Conan?");
+                ImGui::OpenPopup("Quit Fight Night?");
             ImGui::PopStyleColor(2);
-            if (ImGui::BeginPopupModal("Quit Conan?", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+            if (ImGui::BeginPopupModal("Quit Fight Night?", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
             {
                 ImGui::TextUnformatted("Progress since the last checkpoint will be lost.");
                 ImGui::Spacing();
@@ -1385,7 +1385,7 @@ namespace
     // WET_PASS_PROBE_AT=<seconds>: at that time, switch off each drawing pass
     // (by shader) in turn for a few frames and measure the centre column of the
     // picture - for the dark line down the middle at 1440p / 4K. One line per
-    // pass in conan.log ("PASS PROBE: ..."); the pass whose removal takes the
+    // pass in fightnight.log ("PASS PROBE: ..."); the pass whose removal takes the
     // line away is the one that makes it. Stand still while it runs (~20 s).
     struct ProbeMetric { double centre = 0, control = 0, mean = 0; bool ok = false; };
 

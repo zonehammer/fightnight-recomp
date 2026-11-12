@@ -1,11 +1,11 @@
-// ConanRecomp host: boots the recompiled WET executable.
+// FightNightRecomp host: boots the recompiled WET executable.
 //
-//   ConanRecomp [--game <dir>] [--hdd <dir>] [--log <file>] [--selftest]
+//   FightNightRecomp [--game <dir>] [--hdd <dir>] [--log <file>] [--selftest]
 //
 // --game  folder holding the extracted disc (default.xex, media, lu0, ...).
 //         Default: game/extracted, searched from the current folder upwards.
 // --hdd   writable folder for save data and cache. Default: <game>/../hdd
-// --log   log file. Default: conan.log in the current folder.
+// --log   log file. Default: fightnight.log in the current folder.
 #include "wet_version.h"
 #include <cstdlib>
 #include "kernel/fs.h"
@@ -42,7 +42,7 @@ using namespace wet;
 static void BackUpSaves(const fs::path& hdd)
 {
     std::error_code ec;
-    fs::path saves = hdd / "content" / "545107DA";
+    fs::path saves = hdd / "content" / "45410915";
     if (!fs::exists(saves, ec) || fs::is_empty(saves, ec))
         return;
     auto read = [](const fs::path& p) {
@@ -74,7 +74,7 @@ static void BackUpSaves(const fs::path& hdd)
             backups.push_back(it->path());
     std::sort(backups.begin(), backups.end());
     auto now = collect(saves, hdd / "achievements.ini");
-    if (!backups.empty() && collect(backups.back() / "545107DA", backups.back() / "achievements.ini") == now)
+    if (!backups.empty() && collect(backups.back() / "45410915", backups.back() / "achievements.ini") == now)
     {
         Log("Saves: unchanged since the last backup (%s)", backups.back().filename().string().c_str());
         return;
@@ -84,7 +84,7 @@ static void BackUpSaves(const fs::path& hdd)
     std::strftime(name, sizeof(name), "auto-%Y-%m-%d_%H-%M-%S", std::localtime(&t));
     fs::path dst = root / name;
     fs::create_directories(dst, ec);
-    fs::copy(saves, dst / "545107DA", fs::copy_options::recursive, ec);
+    fs::copy(saves, dst / "45410915", fs::copy_options::recursive, ec);
     if (fs::exists(hdd / "achievements.ini"))
         fs::copy_file(hdd / "achievements.ini", dst / "achievements.ini", ec);
     if (ec)
@@ -129,7 +129,7 @@ static fs::path FindDefaultGameDir(const char* argv0)
 int main(int argc, char** argv)
 {
     fs::path gameDir, hddDir;
-    std::string logPath = "conan.log";
+    std::string logPath = "fightnight.log";
     std::vector<std::string> watchArgs;
     // The Windows build is a windowed app (no console); --console or WET_CONSOLE=1
     // opens one showing the log as it is written.
@@ -163,7 +163,7 @@ int main(int argc, char** argv)
     }
 
     LogInit(logPath.c_str());
-    Log("Conan Recomp %s", WET_VERSION);
+    Log("Fight Night Recomp %s", WET_VERSION);
 
     if (gameDir.empty())
         gameDir = FindDefaultGameDir(argv[0]);
@@ -171,7 +171,7 @@ int main(int argc, char** argv)
     {
         LogFatal("Could not find the game. Run tools/prepare_game.py first, or pass --game <folder containing default.xex>.");
         os::ShowFatalMessage("Could not find the game files.\n\nPut your extracted WET disc in game\\extracted next to "
-                             "ConanRecomp.exe, so that game\\extracted\\default.xex exists.");
+                             "FightNightRecomp.exe, so that game\\extracted\\default.xex exists.");
         return 1;
     }
     gameDir = fs::absolute(gameDir);

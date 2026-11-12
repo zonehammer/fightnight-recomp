@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""One-command build of Conan Recomp.
+"""One-command build of Fight Night Recomp.
 
-    python tools/build.py --iso "D:/path/to/Conan.iso"      # first time
+    python tools/build.py --iso "D:/path/to/FightNight.iso"      # first time
     python tools/build.py                                  # later rebuilds
 
 On Linux (Steam Deck, Bazzite, ...) it builds the Windows game, to run with
@@ -15,7 +15,7 @@ Steps (each skipped when already done):
   3. extract the disc into game/extracted
   4. configure CMake
   5. recompile default.xex into generated/ppc (again whenever config/ changes)
-  6. build build/runtime/ConanRecomp(.exe) and ConanLauncher.exe (Windows)
+  6. build build/runtime/FightNightRecomp(.exe) and FightNightLauncher.exe (Windows)
 
 Windows without Visual Studio: install Python and Git, then
     pip install cmake ninja
@@ -34,7 +34,7 @@ BUILD = os.path.join(REPO, "build")
 GAME_XEX = os.path.join(REPO, "game", "extracted", "default.xex")
 GENERATED = os.path.join(REPO, "generated", "ppc")
 STAMP = os.path.join(GENERATED, ".config-stamp")
-CONFIG_FILES = [os.path.join(REPO, "config", f) for f in ("Conan_config.toml", "Conan_switch_tables.toml")]
+CONFIG_FILES = [os.path.join(REPO, "config", f) for f in ("FightNight_config.toml", "FightNight_switch_tables.toml")]
 PATCH = os.path.join(REPO, "patches", "xenonrecomp-wet.patch")
 
 
@@ -80,7 +80,7 @@ def config_fingerprint():
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--iso", help="your Conan disc image, or the folder of an already extracted disc "
+    ap.add_argument("--iso", help="your Fight Night Champion disc image, or the folder of an already extracted disc "
                                   "(only needed the first time)")
     ap.add_argument("--toolchain", choices=["auto", "mingw", "clang-cl"], default="auto",
                     help="auto: clang/clang++ (llvm-mingw on Windows); clang-cl: Visual Studio's Clang")
@@ -125,7 +125,7 @@ def main():
     if not os.path.exists(GAME_XEX):
         if not args.iso:
             sys.exit("\ngame/extracted/default.xex not found. Pass your disc image once:\n"
-                     '    python tools/build.py --iso "path/to/Conan.iso"')
+                     '    python tools/build.py --iso "path/to/FightNight.iso"')
         run([sys.executable, os.path.join(REPO, "tools", "prepare_game.py"), args.iso])
     else:
         print("   game/extracted present")
@@ -152,8 +152,8 @@ def main():
     step("Building (the first build compiles ~250 MB of generated C++ and takes a while)")
     run(["cmake", "--build", BUILD] + jobs)
 
-    exe = os.path.join(BUILD, "runtime", "ConanRecomp.exe" if os.name == "nt" else "ConanRecomp")
-    print(f"\nDone: {exe}\nRun it from the repository folder; it writes conan.log next to where you run it.")
+    exe = os.path.join(BUILD, "runtime", "FightNightRecomp.exe" if os.name == "nt" else "FightNightRecomp")
+    print(f"\nDone: {exe}\nRun it from the repository folder; it writes fightnight.log next to where you run it.")
 
 
 def find_llvm_mingw_linux(arg):
@@ -216,7 +216,7 @@ def main_linux(args):
     if not os.path.exists(GAME_XEX):
         if not args.iso:
             sys.exit("\ngame/extracted/default.xex not found. Pass your disc image once:\n"
-                     '    python3 tools/build.py --iso "path/to/Conan.iso"')
+                     '    python3 tools/build.py --iso "path/to/FightNight.iso"')
         run([sys.executable, os.path.join(REPO, "tools", "prepare_game.py"), args.iso])
     else:
         print("   game/extracted present")
@@ -260,11 +260,11 @@ def main_linux(args):
         print("   generated/ppc is up to date with config/")
 
     step("Building (the first build compiles ~250 MB of generated C++ and takes a while)")
-    run(["cmake", "--build", win_build, "--target", "ConanRecomp", "ConanLauncher"] + jobs)
+    run(["cmake", "--build", win_build, "--target", "FightNightRecomp", "FightNightLauncher"] + jobs)
 
     out = os.path.join(win_build, "runtime")
-    print(f"\nDone: {os.path.join(out, 'ConanLauncher.exe')}\n"
-          "Add ConanLauncher.exe to Steam (Games > Add a Non-Steam Game), then in its Properties > Compatibility\n"
+    print(f"\nDone: {os.path.join(out, 'FightNightLauncher.exe')}\n"
+          "Add FightNightLauncher.exe to Steam (Games > Add a Non-Steam Game), then in its Properties > Compatibility\n"
           "tick \"Force the use of a specific Steam Play compatibility tool\" and pick Proton.")
 
 

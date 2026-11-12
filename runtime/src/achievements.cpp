@@ -28,7 +28,7 @@ namespace wet::achievements
         uint32_t Be32(const uint8_t* p) { return uint32_t(p[0]) << 24 | p[1] << 16 | p[2] << 8 | p[3]; }
         uint64_t Be64(const uint8_t* p) { return uint64_t(Be32(p)) << 32 | Be32(p + 4); }
 
-        // The SPA resource is named after the title id ("545107DA").
+        // The SPA resource is named after the title id ("45410915").
         bool FindSpa(uint32_t& address, uint32_t& size)
         {
             uint32_t info = XexHeaderField(g_module.guestHeader, 0x000002FF);
@@ -130,7 +130,7 @@ namespace wet::achievements
                     if (c == '\t' || c == '\n' || c == '\r') c = ' ';
                 return t;
             };
-            std::fprintf(f, "# Written by Conan Recomp for the launcher's achievements list.\n");
+            std::fprintf(f, "# Written by Fight Night Recomp for the launcher's achievements list.\n");
             for (auto& a : s_list)
                 std::fprintf(f, "%u\t%u\t%d\t%llu\t%d\t%s\t%s\n", a.id, a.gamerscore, a.unlocked ? 1 : 0,
                              (unsigned long long)a.unlockTime, a.secret ? 1 : 0, clean(a.name).c_str(),
@@ -146,7 +146,7 @@ namespace wet::achievements
             FILE* f = std::fopen(s_file.string().c_str(), "w");
             if (!f)
                 return;
-            std::fprintf(f, "# Conan Recomp achievements: id = unlock time (Unix seconds). Delete a line to re-lock it.\n");
+            std::fprintf(f, "# Fight Night Recomp achievements: id = unlock time (Unix seconds). Delete a line to re-lock it.\n");
             for (auto& a : s_list)
                 if (a.unlocked)
                     std::fprintf(f, "%u = %llu  # %s\n", a.id, (unsigned long long)a.unlockTime, a.name.c_str());

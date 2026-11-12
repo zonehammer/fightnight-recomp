@@ -1,6 +1,6 @@
 // Disk space clean-up shared by Setup and the launcher.
 //
-// An install is <root>\conan-recomp (the source, the extracted disc in
+// An install is <root>\fightnight-recomp (the source, the extracted disc in
 // game\extracted, saves in game\hdd, the build in build) plus, for Setup
 // installs, <root>\tools (Git, CMake, Ninja, Clang, Python). Once built, the
 // game only needs build\runtime's programs and game\: the compiler's object

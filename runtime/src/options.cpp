@@ -32,7 +32,7 @@ namespace wet::options
         std::atomic<int> s_videoMode{ 1 };
         int s_scale = 1, s_scaleRunning = 1;
         std::atomic<int> s_aa{ 0 }, s_filter{ 0 }, s_fullscreen{ 0 }, s_showFps{ 0 }, s_sharpness{ 50 }, s_filmGrain{ 100 }, s_fov{ 90 }, s_widescreen{ 0 }, s_widescreenHud{ 1 }, s_hideBorders{ 0 }, s_vsync{ 0 }, s_buttonPrompts{ 0 }, s_mouseAim{ 1 }, s_mouseSens{ 50 }, s_mouseInvert{ 0 }, s_mouseDirect{ 1 }, s_mouseNative{ 1 }, s_skipIntro{ 1 }, s_musicMode{ 0 }, s_musicVolume{ 80 }, s_musicShuffle{ 1 }, s_outfit{ 0 }, s_hair{ 0 }, s_brightness{ 0 }, s_contrast{ 100 }, s_gamma{ 100 }, s_saturation{ 100 }, s_aniso{ 1 }, s_autoBackup{ 1 }, s_shaderCache{ 1 }, s_asyncShaders{ 1 }, s_shaderPreload{ 0 }, s_adaptiveWatch{ 1 }, s_refreshGpuMemory{ 0 }, s_gpuWait{ 1 }, s_rov{ 0 }, s_vibration{ 1 }, s_achievementPopups{ 1 }, s_motionBlur{ 1 }, s_depthOfField{ 1 }, s_cameraShake{ 1 }, s_language{ 0 };
-        constexpr const char* kFile = "conan.ini";
+        constexpr const char* kFile = "fightnight.ini";
         // Mouse button bindings: left, right, middle, back (X1), forward (X2).
         constexpr const char* kMouseKeys[5] = { "mouse_left", "mouse_right", "mouse_middle", "mouse_back", "mouse_forward" };
         std::string s_mouseBind[5] = { "RT", "LT", "RTHUMB", "LB", "RB" };
@@ -100,7 +100,7 @@ namespace wet::options
     {
         if (FILE* f = std::fopen(kFile, "w"))
         {
-            std::fprintf(f, "# Conan Recomp options (F1 in game opens the settings overlay)\n");
+            std::fprintf(f, "# Fight Night Recomp options (F1 in game opens the settings overlay)\n");
             std::fprintf(f, "# fps: 30 (the game's own) up to 360, or 0 = match the monitor's refresh rate - F6 cycles in game\n");
             std::fprintf(f, "fps = %d\n", s_fps.load());
             std::fprintf(f, "# resolution_scale: 1 = 720p (the game's own), 2 = 1440p, 3 = 2160p (4K); needs a restart\n");
@@ -241,7 +241,7 @@ namespace wet::options
         FILE* f = std::fopen(kFile, "r");
         if (!f)
         {
-            // First start (no conan.ini): resolution and anti-aliasing to suit the
+            // First start (no fightnight.ini): resolution and anti-aliasing to suit the
             // graphics card instead of 720p for everyone.
             gpu_info::Info gpu = gpu_info::Query();
             gpu_info::Recommended r = gpu_info::Recommend(gpu);
@@ -352,7 +352,7 @@ namespace wet::options
         }
 #if !GAME_WET
         // Settings that only do something in WET (its game hooks, shaders and
-        // textures): off, whatever an older conan.ini says. Direct / native
+        // textures): off, whatever an older fightnight.ini says. Direct / native
         // mouse look would take the mouse away from the right stick with no
         // hook to give it to.
         s_mouseDirect = false;

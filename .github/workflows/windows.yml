@@ -61,7 +61,7 @@ jobs:
       - name: Build
         shell: pwsh
         run: |
-          cmake --build build --target XenonAnalyse XenonRecomp ConanRecomp ConanLauncher ConanSetup -- -k 0 2>&1 | Tee-Object -FilePath build.log
+          cmake --build build --target XenonAnalyse XenonRecomp FightNightRecomp FightNightLauncher FightNightSetup -- -k 0 2>&1 | Tee-Object -FilePath build.log
           if ($LASTEXITCODE -ne 0) {
             # Surface compiler/linker errors as annotations (readable without downloading logs).
             # GitHub keeps only 10 annotations per step, so pack the unique ones into a few.
@@ -87,33 +87,33 @@ jobs:
         run: |
           # With no game present the runtime must start, log, and exit with code 1.
           # (A windowed app: PowerShell doesn't wait for it, so Start-Process -Wait.)
-          $p = Start-Process build\runtime\ConanRecomp.exe -ArgumentList '--game','no-such-folder','--log','smoke.log' -Wait -PassThru -NoNewWindow
+          $p = Start-Process build\runtime\FightNightRecomp.exe -ArgumentList '--game','no-such-folder','--log','smoke.log' -Wait -PassThru -NoNewWindow
           if ($p.ExitCode -ne 1) { throw "unexpected exit code $($p.ExitCode)" }
           Get-Content smoke.log
           # Physical memory must be mirrored across the 0xA/0xC/0xE views.
-          $p = Start-Process build\runtime\ConanRecomp.exe -ArgumentList '--selftest' -Wait -PassThru -NoNewWindow
+          $p = Start-Process build\runtime\FightNightRecomp.exe -ArgumentList '--selftest' -Wait -PassThru -NoNewWindow
           $selftest = $p.ExitCode
           Get-Content selftest.log | ForEach-Object { Write-Output "::notice::$_" }
           if ($selftest -ne 0) { throw "memory self-test failed" }
           # The same with the fixed-address mapping Wine / Proton get (no placeholders).
           $env:WET_NO_PLACEHOLDERS = '1'
-          $p = Start-Process build\runtime\ConanRecomp.exe -ArgumentList '--selftest' -Wait -PassThru -NoNewWindow
+          $p = Start-Process build\runtime\FightNightRecomp.exe -ArgumentList '--selftest' -Wait -PassThru -NoNewWindow
           Remove-Item Env:WET_NO_PLACEHOLDERS
           Get-Content selftest.log | ForEach-Object { Write-Output "::notice::(no placeholders) $_" }
           if ($p.ExitCode -ne 0) { throw "memory self-test without placeholders failed" }
           & build\thirdparty\XenonRecomp\XenonRecomp\XenonRecomp.exe
           if ($LASTEXITCODE -ne 0) { throw "XenonRecomp.exe failed to start" }
 
-      - name: Upload ConanSetup.exe
+      - name: Upload FightNightSetup.exe
         if: matrix.toolchain == 'llvm-mingw'
         uses: actions/upload-artifact@v4
         with:
-          name: ConanSetup
-          path: build/runtime/ConanSetup.exe
+          name: FightNightSetup
+          path: build/runtime/FightNightSetup.exe
 
-      # A release (tag v*) gets ConanSetup.exe attached: it holds nothing from the
+      # A release (tag v*) gets FightNightSetup.exe attached: it holds nothing from the
       # game, only the setup that builds from the player's own disc.
-      - name: Attach ConanSetup.exe to the release
+      - name: Attach FightNightSetup.exe to the release
         if: matrix.toolchain == 'llvm-mingw' && startsWith(github.ref, 'refs/tags/v')
         shell: pwsh
         env:
@@ -121,7 +121,7 @@ jobs:
         run: |
           gh release view $env:GITHUB_REF_NAME 2>$null
           if ($LASTEXITCODE -ne 0) { gh release create $env:GITHUB_REF_NAME --title $env:GITHUB_REF_NAME --notes "See the README." }
-          gh release upload $env:GITHUB_REF_NAME build/runtime/ConanSetup.exe --clobber
+          gh release upload $env:GITHUB_REF_NAME build/runtime/FightNightSetup.exe --clobber
 
       - name: Upload recompiler tools
         if: matrix.toolchain == 'llvm-mingw'

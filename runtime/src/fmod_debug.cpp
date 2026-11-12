@@ -2,7 +2,7 @@
 // the game) hands out blocks from a bitmap; sub_826686F8(pool, first_block, used,
 // count) marks blocks used (1) or free (0). Block size at pool+352, base at pool+4.
 #include "game.h"
-#if !GAME_WET
+#if GAME_CONAN
 #include "kernel/kernel.h"
 #include "kernel/threads.h"
 #include "watch.h"

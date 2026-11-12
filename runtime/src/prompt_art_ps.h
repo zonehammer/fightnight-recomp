@@ -20,7 +20,7 @@
 #include <functional>
 #include <vector>
 
-namespace wet::conan_prompt_art
+namespace wet::prompt_art_ps
 {
     using prompt_art::Box;
     using prompt_art::Label;

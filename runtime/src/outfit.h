@@ -1,4 +1,4 @@
-// Rubi's outfit colour (outfit_colour in conan.ini): her clothes' textures are
+// Rubi's outfit colour (outfit_colour in fightnight.ini): her clothes' textures are
 // recoloured where the GPU emulation first reads them (the texture hook).
 // They're DXT1/DXT5: each 4x4 block's colours are two end colours and 2-bit
 // picks between them, so recolouring a block is recolouring its two colours -

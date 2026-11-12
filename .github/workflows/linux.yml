@@ -38,7 +38,7 @@ jobs:
           cmake -S . -B build/windows -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-cross.cmake \
             -DLLVM_MINGW="$LLVM_MINGW" -DWET_CI_STUB=ON \
             -DWET_HOST_XENONRECOMP="$PWD/build/host/thirdparty/XenonRecomp/XenonRecomp/XenonRecomp"
-          cmake --build build/windows --target ConanRecomp ConanLauncher
+          cmake --build build/windows --target FightNightRecomp FightNightLauncher
           ls -la build/windows/runtime/*.exe
 
       - name: setup_linux.py parses

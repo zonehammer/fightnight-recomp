@@ -25,7 +25,7 @@ endif()
 target_precompile_headers(WetPPC PRIVATE ${WET_GENERATED_DIR}/ppc_recomp_shared.h)
 
 # ---------------------------------------------------------------------------
-# ConanRecomp: the host program
+# FightNightRecomp: the host program
 # ---------------------------------------------------------------------------
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 find_package(Threads REQUIRED)
@@ -64,40 +64,40 @@ else()
     target_include_directories(WetRenderer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 endif()
 
-add_executable(ConanRecomp ${WET_RUNTIME_SOURCES} ${WET_STUBS_CPP})
+add_executable(FightNightRecomp ${WET_RUNTIME_SOURCES} ${WET_STUBS_CPP})
 if(WIN32)
-    # The game's icon (launcher/conan.ico): the exe and its window (Xenia loads MAINICON).
-    target_sources(ConanRecomp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/conanrecomp.rc)
-    set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/conanrecomp.rc PROPERTIES
-                                OBJECT_DEPENDS ${CMAKE_SOURCE_DIR}/launcher/conan.ico)
+    # The game's icon (launcher/game.ico): the exe and its window (Xenia loads MAINICON).
+    target_sources(FightNightRecomp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/fightnightrecomp.rc)
+    set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/fightnightrecomp.rc PROPERTIES
+                                OBJECT_DEPENDS ${CMAKE_SOURCE_DIR}/launcher/game.ico)
 endif()
 # XenonUtils headers come via the XenonUtils link (after WetPPC, so the generated
 # ppc_context.h wins over the template of the same name).
-target_include_directories(ConanRecomp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${XR_DIR}/thirdparty/TinySHA1 ${WET_VERSION_INCLUDE})
-target_link_libraries(ConanRecomp PRIVATE WetPPC WetRenderer XenonUtils Threads::Threads)
+target_include_directories(FightNightRecomp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${XR_DIR}/thirdparty/TinySHA1 ${WET_VERSION_INCLUDE})
+target_link_libraries(FightNightRecomp PRIVATE WetPPC WetRenderer XenonUtils Threads::Threads)
 if(WET_HAVE_SDL)
-    target_link_libraries(ConanRecomp PRIVATE SDL2::SDL2-static)
-    target_compile_definitions(ConanRecomp PRIVATE WET_HAVE_SDL=1)
+    target_link_libraries(FightNightRecomp PRIVATE SDL2::SDL2-static)
+    target_compile_definitions(FightNightRecomp PRIVATE WET_HAVE_SDL=1)
 endif()
 
 if(WIN32)
-    target_compile_definitions(ConanRecomp PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN _CRT_SECURE_NO_WARNINGS)
+    target_compile_definitions(FightNightRecomp PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN _CRT_SECURE_NO_WARNINGS)
     if(MINGW)
-        target_link_libraries(ConanRecomp PRIVATE xinput1_4 winmm dxgi mfplat mfreadwrite mfuuid ole32)
+        target_link_libraries(FightNightRecomp PRIVATE xinput1_4 winmm dxgi mfplat mfreadwrite mfuuid ole32)
         # Guest code recurses deeply; give the main thread a big stack too.
         # The map file lets tools/resolve_profile.py name profiled addresses.
-        target_link_options(ConanRecomp PRIVATE -Wl,--stack,16777216 -Wl,-Map=$<TARGET_FILE_DIR:ConanRecomp>/ConanRecomp.map)
+        target_link_options(FightNightRecomp PRIVATE -Wl,--stack,16777216 -Wl,-Map=$<TARGET_FILE_DIR:FightNightRecomp>/FightNightRecomp.map)
         # A windowed app (no console window); main() stays the entry point.
-        target_link_options(ConanRecomp PRIVATE -Wl,--subsystem,windows)
+        target_link_options(FightNightRecomp PRIVATE -Wl,--subsystem,windows)
     else()
-        target_link_libraries(ConanRecomp PRIVATE xinput winmm dxgi mfplat mfreadwrite mfuuid ole32)
-        target_link_options(ConanRecomp PRIVATE /MAP:$<TARGET_FILE_DIR:ConanRecomp>/ConanRecomp.map /SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup)
+        target_link_libraries(FightNightRecomp PRIVATE xinput winmm dxgi mfplat mfreadwrite mfuuid ole32)
+        target_link_options(FightNightRecomp PRIVATE /MAP:$<TARGET_FILE_DIR:FightNightRecomp>/FightNightRecomp.map /SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup)
     endif()
 endif()
 if(MSVC)
-    target_compile_options(ConanRecomp PRIVATE /clang:-fno-strict-aliasing -Wno-unused-parameter)
+    target_compile_options(FightNightRecomp PRIVATE /clang:-fno-strict-aliasing -Wno-unused-parameter)
     # Guest code recurses deeply; give the main thread a big stack too.
-    target_link_options(ConanRecomp PRIVATE /STACK:16777216)
+    target_link_options(FightNightRecomp PRIVATE /STACK:16777216)
 else()
-    target_compile_options(ConanRecomp PRIVATE -fno-strict-aliasing -Wall -Wno-unused-parameter -Wno-unused-function)
+    target_compile_options(FightNightRecomp PRIVATE -fno-strict-aliasing -Wall -Wno-unused-parameter -Wno-unused-function)
 endif()

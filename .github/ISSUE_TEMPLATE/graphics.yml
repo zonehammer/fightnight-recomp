@@ -10,7 +10,7 @@ body:
     id: version
     attributes:
       label: Version
-      description: Shown in the launcher title and at the top of conan.log (e.g. 0.2.6).
+      description: Shown in the launcher title and at the top of fightnight.log (e.g. 0.2.6).
       placeholder: "0.2.6"
     validations:
       required: true
@@ -45,7 +45,7 @@ body:
     attributes:
       label: Logs
       description: |
-        Drag in the zip from **Report a bug...** in the launcher (WET-bug-report-*.zip: conan.log, conan.ini and system info).
-        Or attach `conan.log` from next to ConanRecomp.exe. Please run the game once more after the problem before attaching, if it reset the log.
+        Drag in the zip from **Report a bug...** in the launcher (WET-bug-report-*.zip: fightnight.log, fightnight.ini and system info).
+        Or attach `fightnight.log` from next to FightNightRecomp.exe. Please run the game once more after the problem before attaching, if it reset the log.
     validations:
       required: true

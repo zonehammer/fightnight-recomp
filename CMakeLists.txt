@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(ConanRecomp C CXX)
+project(FightNightRecomp C CXX)
 
 # Release version (VERSION file) plus the git commit, e.g. "0.1.0 (f421997)".
 file(READ ${CMAKE_CURRENT_SOURCE_DIR}/VERSION WET_VERSION)
@@ -32,14 +32,14 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.git/HEAD)
         endif()
     endif()
 endif()
-message(STATUS "Conan Recomp ${WET_VERSION_STRING}")
+message(STATUS "Fight Night Recomp ${WET_VERSION_STRING}")
 
 # The generated code relies on GNU extensions (weak/alias attributes, __int128,
 # __builtin_*), so the whole project is built with Clang. On Windows that means
 # clang-cl from Visual Studio's "C++ Clang tools for Windows" component.
 if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     message(FATAL_ERROR
-        "Conan Recomp must be built with Clang.\n"
+        "Fight Night Recomp must be built with Clang.\n"
         "Windows: install Visual Studio 2022 with 'C++ Clang tools for Windows', then configure with\n"
         "  cmake -B build -G Ninja -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl -DCMAKE_BUILD_TYPE=Release")
 endif()
@@ -127,7 +127,7 @@ else()
     endif()
     add_custom_target(recompile
         COMMAND ${CMAKE_COMMAND} -E make_directory ${WET_GENERATED_DIR}
-        COMMAND ${WET_RECOMPILER} ${WET_ROOT}/config/Conan_config.toml ${XR_DIR}/XenonUtils/ppc_context.h
+        COMMAND ${WET_RECOMPILER} ${WET_ROOT}/config/FightNight_config.toml ${XR_DIR}/XenonUtils/ppc_context.h
         WORKING_DIRECTORY ${WET_ROOT}/config
         DEPENDS ${WET_RECOMPILER_DEPENDS}
         COMMENT "Recompiling game/extracted/default.xex into generated/ppc (re-run CMake configure afterwards)"
@@ -151,28 +151,28 @@ endif()
 include(cmake/sdl.cmake)
 
 # ---------------------------------------------------------------------------
-# WET Launcher: settings window that edits conan.ini and starts the game (Windows)
+# WET Launcher: settings window that edits fightnight.ini and starts the game (Windows)
 # ---------------------------------------------------------------------------
 if(WIN32)
     enable_language(RC)
-    add_executable(ConanLauncher WIN32 launcher/launcher.cpp launcher/launcher.rc)
-    set_target_properties(ConanLauncher PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/runtime)
-    target_compile_definitions(ConanLauncher PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN)
-    target_include_directories(ConanLauncher PRIVATE ${WET_VERSION_INCLUDE} ${CMAKE_SOURCE_DIR}/runtime/src)
-    target_link_libraries(ConanLauncher PRIVATE comctl32 comdlg32 shell32 winhttp advapi32 winmm ole32 windowscodecs uuid dxgi)
-    # Icon: launcher/conan.ico, or your own launcher/launcher.ico (not in git) instead.
+    add_executable(FightNightLauncher WIN32 launcher/launcher.cpp launcher/launcher.rc)
+    set_target_properties(FightNightLauncher PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/runtime)
+    target_compile_definitions(FightNightLauncher PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN)
+    target_include_directories(FightNightLauncher PRIVATE ${WET_VERSION_INCLUDE} ${CMAKE_SOURCE_DIR}/runtime/src)
+    target_link_libraries(FightNightLauncher PRIVATE comctl32 comdlg32 shell32 winhttp advapi32 winmm ole32 windowscodecs uuid dxgi)
+    # Icon: launcher/game.ico, or your own launcher/launcher.ico (not in git) instead.
     if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/launcher/launcher.ico)
         set_source_files_properties(launcher/launcher.rc PROPERTIES COMPILE_DEFINITIONS WET_LAUNCHER_ICON
                                     OBJECT_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/launcher/launcher.ico)
     else()
         set_source_files_properties(launcher/launcher.rc PROPERTIES
-                                    OBJECT_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/launcher/conan.ico)
+                                    OBJECT_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/launcher/game.ico)
     endif()
     set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/launcher)
     if(MINGW)
-        target_link_options(ConanLauncher PRIVATE -municode)
+        target_link_options(FightNightLauncher PRIVATE -municode)
     elseif(MSVC)
-        target_link_options(ConanLauncher PRIVATE /MANIFEST:NO)
+        target_link_options(FightNightLauncher PRIVATE /MANIFEST:NO)
     endif()
 endif()
 
@@ -181,17 +181,17 @@ endif()
 # (Windows). Contains nothing from the game; published with each release.
 # ---------------------------------------------------------------------------
 if(WIN32)
-    add_executable(ConanSetup WIN32 launcher/setup.cpp launcher/launcher.rc)
-    set_target_properties(ConanSetup PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/runtime)
-    target_compile_definitions(ConanSetup PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN)
-    target_include_directories(ConanSetup PRIVATE ${WET_VERSION_INCLUDE})
-    target_link_libraries(ConanSetup PRIVATE comctl32 comdlg32 shell32 ole32 uuid winhttp)
+    add_executable(FightNightSetup WIN32 launcher/setup.cpp launcher/launcher.rc)
+    set_target_properties(FightNightSetup PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/runtime)
+    target_compile_definitions(FightNightSetup PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN)
+    target_include_directories(FightNightSetup PRIVATE ${WET_VERSION_INCLUDE})
+    target_link_libraries(FightNightSetup PRIVATE comctl32 comdlg32 shell32 ole32 uuid winhttp)
     if(MINGW)
         # One file that runs anywhere (no libc++ / unwind DLLs next to it).
-        target_link_options(ConanSetup PRIVATE -municode -static)
+        target_link_options(FightNightSetup PRIVATE -municode -static)
     elseif(MSVC)
         # launcher.rc carries the manifest; don't let the linker add a second one.
-        target_link_options(ConanSetup PRIVATE /MANIFEST:NO)
+        target_link_options(FightNightSetup PRIVATE /MANIFEST:NO)
     endif()
 endif()
 
@@ -205,6 +205,6 @@ else()
         "generated/ppc/ does not exist yet, so the game itself is not part of this build.\n"
         "  1. python tools/prepare_game.py <your WET .iso>\n"
         "  2. cmake --build build --target recompile\n"
-        "  3. cmake build   (re-configure; the ConanRecomp target appears)\n"
+        "  3. cmake build   (re-configure; the FightNightRecomp target appears)\n"
         "  4. cmake --build build")
 endif()

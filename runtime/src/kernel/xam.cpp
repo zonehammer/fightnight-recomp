@@ -15,7 +15,7 @@ using namespace wet;
 // ---------------------------------------------------------------------------
 // Console / title info
 // ---------------------------------------------------------------------------
-GUEST_IMPORT(XGetLanguage) { Ret(ctx, uint32_t(options::Language())); }   // conan.ini language
+GUEST_IMPORT(XGetLanguage) { Ret(ctx, uint32_t(options::Language())); }   // fightnight.ini language
 GUEST_IMPORT(XGetGameRegion) { Ret(ctx, 0xFFFF); } // region free
 
 GUEST_IMPORT(XamGetExecutionId)

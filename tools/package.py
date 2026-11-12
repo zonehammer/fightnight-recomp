@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
-"""Makes a ready-to-run Conan Recomp folder (no Python, CMake or compiler needed to play).
+"""Makes a ready-to-run Fight Night Recomp folder (no Python, CMake or compiler needed to play).
 
-    python tools/package.py                       # dist/Conan-Recomp-<version>, without game files
+    python tools/package.py                       # dist/FightNight-Recomp-<version>, without game files
     python tools/package.py --with-game           # also copies game/extracted (about 4.3 GB)
     python tools/package.py --with-saves --zip    # also copies saves/achievements/shader cache, and zips it
 
 Layout of the folder:
-    Conan-Recomp-<version>/
+    FightNight-Recomp-<version>/
       WET Launcher.exe         settings window with a Play button (start here)
-      ConanRecomp.exe            the game (starts straight away, skipping the launcher)
+      FightNightRecomp.exe            the game (starts straight away, skipping the launcher)
       README.txt               how to run it, controls, settings
       THIRD-PARTY-NOTICES.txt  licences of the libraries inside the exe
       game/extracted/          your extracted WET disc (default.xex, lu0, media, ...)
       game/hdd/                saves, achievements and the shader cache (created on first run)
 
-conan.ini (settings) and conan.log are written next to ConanRecomp.exe.
+fightnight.ini (settings) and fightnight.log are written next to FightNightRecomp.exe.
 
 The exe contains code translated from your copy of WET, so the package is for your
 own machines: don't share it publicly, and never commit it (dist/ is git-ignored).
@@ -57,7 +57,7 @@ all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED "AS
 WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.
 """
 
-README = """Conan Recompiled
+README = """Fight Night Champion Recompiled
 ==============
 
 WET (Xbox 360) recompiled to run natively on Windows 10/11 (64-bit).
@@ -69,7 +69,7 @@ Put your extracted WET disc in game\\extracted, so that this file exists:
 (tools\\prepare_game.py in the source tree extracts it from your disc image.)
 
 Then double-click "WET Launcher.exe": choose your settings and press Play.
-(ConanRecomp.exe starts the game directly with the last settings.)
+(FightNightRecomp.exe starts the game directly with the last settings.)
 
 Requirements: a DirectX 12 graphics card (Vulkan 1.1 is the fallback) and an
 up-to-date graphics driver.
@@ -90,7 +90,7 @@ Quit to desktop: in the pause menu, hold Back (Backspace) for 1.5 seconds, or us
 the Quit to desktop button in the F1 overlay.
 
 Rebind any key in the F1 overlay (Keyboard bindings: click an action, then press a
-key), with the launcher's Keyboard... button, or in conan.ini (key_a = SPACE).
+key), with the launcher's Keyboard... button, or in fightnight.ini (key_a = SPACE).
 
 Keys
 ----
@@ -105,7 +105,7 @@ F8   save the next 48 frames to frames\\ (for bug reports)
 F10  start / stop the profiler (profile.txt, for bug reports)
 
 There's no console window; to watch the log while playing, start it with
-ConanRecomp.exe --console. Settings are saved in conan.ini next to ConanRecomp.exe. Some (resolution,
+FightNightRecomp.exe --console. Settings are saved in fightnight.ini next to FightNightRecomp.exe. Some (resolution,
 language, button prompts) apply at the next start. The first start picks settings to
 suit your graphics card.
 
@@ -117,7 +117,7 @@ ever look wrong after a driver update, delete game\\hdd\\shaders.
 
 Problems
 --------
-conan.log (next to ConanRecomp.exe) records what happened, including crash details.
+fightnight.log (next to FightNightRecomp.exe) records what happened, including crash details.
 "Report a bug..." in the launcher zips the logs, settings and system info (nothing
 else) and opens the GitHub issue page. "Check for updates" compares this build with
 the latest release.
@@ -128,7 +128,7 @@ use. Don't share it publicly. Each player needs their own copy of the game.
 
 
 def find_exe():
-    for path in ("build/runtime/ConanRecomp.exe", "build/runtime/ConanRecomp"):
+    for path in ("build/runtime/FightNightRecomp.exe", "build/runtime/FightNightRecomp"):
         full = os.path.join(REPO, path)
         if os.path.exists(full):
             return full
@@ -152,7 +152,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     with open(os.path.join(REPO, "VERSION")) as v:
         version = v.read().strip()
-    ap.add_argument("--out", default=os.path.join(REPO, "dist", "Conan-Recomp-" + version), help="output folder")
+    ap.add_argument("--out", default=os.path.join(REPO, "dist", "FightNight-Recomp-" + version), help="output folder")
     ap.add_argument("--with-game", action="store_true", help="copy game/extracted into the package (about 4.3 GB)")
     ap.add_argument("--with-saves", action="store_true",
                     help="copy game/hdd (saves, achievements, shader cache) into the package")
@@ -161,24 +161,24 @@ def main():
 
     exe = find_exe()
     if not exe:
-        sys.exit("No build/runtime/ConanRecomp.exe - run python tools/build.py first.")
+        sys.exit("No build/runtime/FightNightRecomp.exe - run python tools/build.py first.")
     out = os.path.abspath(args.out)
     print(f"== Packaging {exe}\n   into {out}")
-    if os.path.exists(os.path.join(out, "ConanRecomp.exe")):
-        os.remove(os.path.join(out, "ConanRecomp.exe"))
+    if os.path.exists(os.path.join(out, "FightNightRecomp.exe")):
+        os.remove(os.path.join(out, "FightNightRecomp.exe"))
     os.makedirs(os.path.join(out, "game", "extracted"), exist_ok=True)
     os.makedirs(os.path.join(out, "game", "hdd"), exist_ok=True)
     shutil.copy2(exe, os.path.join(out, os.path.basename(exe)))
-    launcher = os.path.join(os.path.dirname(exe), "ConanLauncher.exe")
+    launcher = os.path.join(os.path.dirname(exe), "FightNightLauncher.exe")
     if os.path.exists(launcher):
         shutil.copy2(launcher, os.path.join(out, "WET Launcher.exe"))
     else:
-        print("   (no ConanLauncher.exe in the build - the package has the game only)")
+        print("   (no FightNightLauncher.exe in the build - the package has the game only)")
 
     with open(os.path.join(out, "README.txt"), "w", newline="\r\n") as f:
         f.write(README)
     with open(os.path.join(out, "THIRD-PARTY-NOTICES.txt"), "w", newline="\r\n", encoding="utf-8") as f:
-        f.write("ConanRecomp.exe includes the following libraries.\n\n")
+        f.write("FightNightRecomp.exe includes the following libraries.\n\n")
         for title, path in NOTICES:
             full = os.path.join(REPO, path)
             f.write("=" * 78 + "\n" + title + "\n" + "=" * 78 + "\n")
@@ -190,7 +190,7 @@ def main():
         f.write("=" * 78 + "\n" + NIS_NOTICE)
         f.write("=" * 78 + "\n" + SMAA_NOTICE)
         f.write("\nFFmpeg is used under the LGPL 2.1; its source is in the Xenia submodule\n"
-                "(thirdparty/xenia/third_party/FFmpeg) of the Conan Recomp source tree.\n")
+                "(thirdparty/xenia/third_party/FFmpeg) of the Fight Night Recomp source tree.\n")
 
     game_src = os.path.join(REPO, "game", "extracted")
     if args.with_game:
@@ -205,9 +205,9 @@ def main():
             print("== Copying saves, achievements and shader cache")
             n = copy_tree(hdd_src, os.path.join(out, "game", "hdd"))
             print(f"   {n} files")
-    ini = os.path.join(REPO, "conan.ini")
-    if os.path.exists(ini) and not os.path.exists(os.path.join(out, "conan.ini")):
-        shutil.copy2(ini, os.path.join(out, "conan.ini"))   # your current settings as the starting point
+    ini = os.path.join(REPO, "fightnight.ini")
+    if os.path.exists(ini) and not os.path.exists(os.path.join(out, "fightnight.ini")):
+        shutil.copy2(ini, os.path.join(out, "fightnight.ini"))   # your current settings as the starting point
 
     if args.zip:
         zip_path = out.rstrip("\\/") + ".zip"

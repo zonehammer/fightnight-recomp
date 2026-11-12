@@ -5,7 +5,7 @@
 // hooks don't run (menus, turrets, other cameras) the mouse goes back to the
 // right stick (padaim.cpp / input.cpp) after kHandBack.
 //
-// Hook points and the camera layout are from nikolaygorb/ConanRecomp (MIT):
+// Hook points and the camera layout are from nikolaygorb/FightNightRecomp (MIT):
 // Cam3rd::Update (sub_829BA128) gathers its input in sub_829B8078: the right
 // stick from its WetCameraInput (camera+488, device at +4) through
 // WetCameraInputFilter::ModifyAndFilterRightStickValue (sub_829A64B8, filter at

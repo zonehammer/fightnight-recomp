@@ -340,17 +340,17 @@ namespace wet::os
         LogFatal("  faulting code: %s+0x%llX", shortName,
                  (unsigned long long)(mod ? pc - uintptr_t(mod) : pc));
         LogFlush();
-        ShowFatalMessage("Conan Recomp crashed.\n\nThe details are at the end of conan.log, next to ConanRecomp.exe.");
+        ShowFatalMessage("Fight Night Recomp crashed.\n\nThe details are at the end of fightnight.log, next to FightNightRecomp.exe.");
         return EXCEPTION_CONTINUE_SEARCH;
     }
 
     void ShowFatalMessage(const char* text)
     {
         if (!GetConsoleWindow() && !std::getenv("CI") && !std::getenv("WET_NO_DIALOGS"))
-            MessageBoxA(nullptr, text, "Conan Recomp", MB_OK | MB_ICONERROR | MB_TOPMOST | MB_SETFOREGROUND);
+            MessageBoxA(nullptr, text, "Fight Night Recomp", MB_OK | MB_ICONERROR | MB_TOPMOST | MB_SETFOREGROUND);
     }
 
-    // The display chosen in conan.ini (monitor = \\.\DISPLAYn), else the main one.
+    // The display chosen in fightnight.ini (monitor = \\.\DISPLAYn), else the main one.
     static bool GameDisplay(MONITORINFOEXW& out)
     {
         struct Search { std::wstring want; MONITORINFOEXW found; bool hit; MONITORINFOEXW primary; bool havePrimary; };

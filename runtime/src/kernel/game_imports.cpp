@@ -70,8 +70,8 @@ GUEST_IMPORT(XamShowDirtyDiscErrorUI)
 {
     Log("XamShowDirtyDiscErrorUI: the game could not read a file from the disc; check game\\extracted");
     LogFlush();
-    os::ShowFatalMessage("Conan Recomp stopped: the game could not read one of its files.\n\n"
-                         "Check that the game was extracted completely (see conan.log).");
+    os::ShowFatalMessage("Fight Night Recomp stopped: the game could not read one of its files.\n\n"
+                         "Check that the game was extracted completely (see fightnight.log).");
     os::ExitProcess(1);
 }
 

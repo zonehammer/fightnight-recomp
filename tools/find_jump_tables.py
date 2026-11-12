@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Find jump tables that XenonAnalyse misses and emit XenonRecomp [[switch]] entries.
 
-Usage: find_jump_tables.py <plain.xex> <existing Conan_switch_tables.toml> [extra functions as start:size,...] > new_tables.toml
+Usage: find_jump_tables.py <plain.xex> <existing FightNight_switch_tables.toml> [extra functions as start:size,...] > new_tables.toml
 
 Needs a decrypted/decompressed XEX (tools/xex_unpack.py).
 

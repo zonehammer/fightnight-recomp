@@ -793,7 +793,7 @@ constexpr uint32_t kPm4XeSwap = 0x64;
 
 // Every 10 s: the frame rate the game actually reached, its slowest frame and
 // how many frames took longer than the target, so a slow stretch shows up in
-// conan.log (on any PC) without an overlay.
+// fightnight.log (on any PC) without an overlay.
 static void NotePerformance()
 {
     using clock = std::chrono::steady_clock;
@@ -876,7 +876,7 @@ static void UpdatePauseQuit(PPCContext& ctx)
         paused = ctx.r3.u32 != 0;
         ctx = saved;
     }
-#else
+#elif GAME_CONAN
     // Conan: the game state object (0x82A01EF0) is in state 5 while a menu is
     // over the game, and 0x82A4AFD8 is 1 when that menu is the pause menu
     // (sub_82242998 sets both; the save menu, sub_82242AE8, sets it to 0).

@@ -27,7 +27,7 @@
 #include "options.h"
 #include "ppc_context.h"
 #include "prompt_art.h"
-#include "conan_prompt_art.h"
+#include "prompt_art_ps.h"
 
 #include <algorithm>
 #include <cstring>
@@ -339,7 +339,7 @@ PPC_FUNC(sub_82B9AC80)
 // of all three (_PS) - and the icons inside text ({ok}, {pickup}...) are on
 // UI_HUD_RenderText.dds, which has the PlayStation ones beside the Xbox ones. The file system (fs.cpp) asks for a substitute as the game
 // opens one: the _PS file for PlayStation art, or for the keyboard a copy of
-// the Xbox sheet with the bound keys drawn in (conan_prompt_art.h), written to
+// the Xbox sheet with the bound keys drawn in (prompt_art_ps.h), written to
 // game\hdd\cache\prompts. The controls screen stays the Xbox one for the
 // keyboard. The game loads them once, at startup.
 namespace wet::prompts
@@ -407,25 +407,25 @@ namespace wet::prompts
                 ps.resize(size_t(w) * h);
                 prompt_art::DecodeDxt5(&psDds[128], int(w), int(h), ps.data());
             }
-            auto pairs = text ? conan_prompt_art::RenderTextPlayStationPairs()
-                         : controller ? conan_prompt_art::ControllerPlayStationPairs()
-                                      : conan_prompt_art::StickPlayStationPairs();
+            auto pairs = text ? prompt_art_ps::RenderTextPlayStationPairs()
+                         : controller ? prompt_art_ps::ControllerPlayStationPairs()
+                                      : prompt_art_ps::StickPlayStationPairs();
             total = pairs.size();
             // The Xbox Back icon's bounds, before it's replaced.
-            conan_prompt_art::Rect back{}, backSearch = text ? conan_prompt_art::Rect{ 131, 59, 196, 115 }
-                                                             : conan_prompt_art::Rect{ 77, 418, 136, 480 };
-            bool haveBack = !sticks && conan_prompt_art::AlphaBounds(px.data(), int(w), backSearch, back);
-            done = conan_prompt_art::FitPlayStationIcons(ps.data(), px.data(), int(w), int(h), pairs);
+            prompt_art_ps::Rect back{}, backSearch = text ? prompt_art_ps::Rect{ 131, 59, 196, 115 }
+                                                             : prompt_art_ps::Rect{ 77, 418, 136, 480 };
+            bool haveBack = !sticks && prompt_art_ps::AlphaBounds(px.data(), int(w), backSearch, back);
+            done = prompt_art_ps::FitPlayStationIcons(ps.data(), px.data(), int(w), int(h), pairs);
             if (haveBack)
-                conan_prompt_art::DrawSelectButton(px.data(), int(w), back);
+                prompt_art_ps::DrawSelectButton(px.data(), int(w), back);
         }
         else
         {
-            auto icons = text         ? conan_prompt_art::RenderTextIcons()
-                         : controller ? conan_prompt_art::ControllerIcons()
-                                      : conan_prompt_art::StickIcons();
+            auto icons = text         ? prompt_art_ps::RenderTextIcons()
+                         : controller ? prompt_art_ps::ControllerIcons()
+                                      : prompt_art_ps::StickIcons();
             total = icons.size();
-            done = conan_prompt_art::RedrawSheet(px.data(), int(w), int(h), icons,
+            done = prompt_art_ps::RedrawSheet(px.data(), int(w), int(h), icons,
                                                  [](prompt_art::Symbol sym, prompt_art::Label& label) {
                                                      return KeyboardLabel(sym, label);
                                                  });

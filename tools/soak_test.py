@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Soak test: plays through the menus and into the first level with scripted
-input (WET_AUTOPRESS), then checks conan.log for crashes, hangs and new stubs.
+input (WET_AUTOPRESS), then checks fightnight.log for crashes, hangs and new stubs.
 
     python tools/soak_test.py                 # one run, about 6 minutes
     python tools/soak_test.py --runs 3        # three runs back to back
@@ -15,7 +15,7 @@ instead of the built-in script; --script or --no-replay go back to the script.
 Run it before tagging a release. Each run uses a fresh save folder (so the game
 always starts with no saves and goes New Game -> first level), keeps its log in
 soak/run-N.log and prints PASS or FAIL with the reason. Your own saves and
-settings aren't touched (conan.ini is read but the in-game settings aren't changed).
+settings aren't touched (fightnight.ini is read but the in-game settings aren't changed).
 
 Exit code 0 when every run passed.
 """
@@ -67,7 +67,7 @@ def script_seconds(script):
 
 
 def find_exe():
-    for path in ("build/runtime/ConanRecomp.exe", "build/windows/runtime/ConanRecomp.exe", "build/runtime/ConanRecomp"):
+    for path in ("build/runtime/FightNightRecomp.exe", "build/windows/runtime/FightNightRecomp.exe", "build/runtime/FightNightRecomp"):
         full = os.path.join(REPO, path)
         if os.path.exists(full):
             return full
@@ -153,7 +153,7 @@ def run_once(exe, inputs, limit, index, out_dir, hang_seconds, keep_saves):
             if size != last_size:
                 last_size, last_change = size, now
             elif now - last_change > hang_seconds:
-                verdict = f"hang: conan.log stopped growing for {hang_seconds} s"
+                verdict = f"hang: fightnight.log stopped growing for {hang_seconds} s"
                 break
             if now - start > limit:
                 verdict = f"timeout: the script didn't finish within {limit:.0f} s"
@@ -192,7 +192,7 @@ def run_once(exe, inputs, limit, index, out_dir, hang_seconds, keep_saves):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--exe", help="ConanRecomp.exe to test (default: the one in build/)")
+    ap.add_argument("--exe", help="FightNightRecomp.exe to test (default: the one in build/)")
     ap.add_argument("--runs", type=int, default=1)
     ap.add_argument("--script", default=DEFAULT_SCRIPT, help="WET_AUTOPRESS steps (see runtime/src/input.cpp)")
     ap.add_argument("--delay", type=float, default=15, help="seconds before the script starts (intro videos)")
@@ -205,7 +205,7 @@ def main():
 
     exe = os.path.abspath(args.exe) if args.exe else find_exe()
     if not exe or not os.path.exists(exe):
-        sys.exit("No ConanRecomp.exe found - build first (python tools/build.py) or pass --exe.")
+        sys.exit("No FightNightRecomp.exe found - build first (python tools/build.py) or pass --exe.")
     out_dir = os.path.join(REPO, "soak")
     os.makedirs(out_dir, exist_ok=True)
     if args.record:

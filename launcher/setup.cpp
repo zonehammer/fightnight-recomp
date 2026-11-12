@@ -1,17 +1,17 @@
-// Conan Setup: one window that turns a Conan disc image into a playable build.
+// Fight Night Setup: one window that turns a Conan disc image into a playable build.
 //
 // Pick the ISO (or an already extracted disc folder) and a folder, press
 // Install. Setup then
 //   1. gets the tools: Git, CMake, Ninja, Clang (llvm-mingw) and Python - the
 //      ones already installed are used, the rest are downloaded (latest
 //      releases, from GitHub and nuget.org) into <folder>\tools,
-//   2. clones (or updates) github.com/zonehammer/conan-recomp into <folder>\conan-recomp
+//   2. clones (or updates) github.com/zonehammer/fightnight-recomp into <folder>\fightnight-recomp
 //      and checks out the latest release,
 //   3. runs tools\build.py --iso <ISO or folder> there (extract or copy, recompile, build),
 //   4. adds a desktop shortcut to the launcher, and if asked, deletes what only
 //      the build needed (launcher/maintenance.h) and the disc image.
 // Running it again updates and rebuilds (the disc is only needed the first time).
-// The launcher's Update button runs it as: ConanSetup.exe --update <folder>.
+// The launcher's Update button runs it as: FightNightSetup.exe --update <folder>.
 //
 // Setup itself contains nothing from the game, so it can be shared; the build
 // it makes can't (it contains code translated from the player's disc).
@@ -46,8 +46,8 @@ namespace fs = std::filesystem;
 
 namespace
 {
-    constexpr wchar_t kTitle[] = L"Conan Recompiled Setup";
-    constexpr char kRepoUrl[] = "https://github.com/zonehammer/conan-recomp.git";
+    constexpr wchar_t kTitle[] = L"Fight Night Champion Recompiled Setup";
+    constexpr char kRepoUrl[] = "https://github.com/zonehammer/fightnight-recomp.git";
 
     enum
     {
@@ -133,7 +133,7 @@ namespace
         if (!WinHttpCrackUrl(url.c_str(), 0, 0, &uc))
             return false;
         std::wstring fullPath = std::wstring(path) + extra;
-        HINTERNET session = WinHttpOpen(L"Conan-Setup", WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, WINHTTP_NO_PROXY_NAME,
+        HINTERNET session = WinHttpOpen(L"FightNight-Setup", WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, WINHTTP_NO_PROXY_NAME,
                                         WINHTTP_NO_PROXY_BYPASS, 0);
         if (!session) return false;
         WinHttpSetTimeouts(session, 15000, 15000, 30000, 60000);
@@ -143,7 +143,7 @@ namespace
                                                          uc.nScheme == INTERNET_SCHEME_HTTPS ? WINHTTP_FLAG_SECURE : 0)
                                     : nullptr;
         bool ok = false;
-        if (request && WinHttpSendRequest(request, L"User-Agent: Conan-Setup\r\n", DWORD(-1), nullptr, 0, 0, 0) &&
+        if (request && WinHttpSendRequest(request, L"User-Agent: FightNight-Setup\r\n", DWORD(-1), nullptr, 0, 0, 0) &&
             WinHttpReceiveResponse(request, nullptr))
         {
             DWORD status = 0, len = sizeof(status);
@@ -316,7 +316,7 @@ namespace
     std::wstring LatestReleaseTag()
     {
         std::string json;
-        if (!Get(L"https://api.github.com/repos/zonehammer/conan-recomp/releases/latest", &json, nullptr))
+        if (!Get(L"https://api.github.com/repos/zonehammer/fightnight-recomp/releases/latest", &json, nullptr))
             return {};
         std::smatch m;
         std::regex tag("\"tag_name\"\\s*:\\s*\"([^\"]+)\"");
@@ -409,11 +409,11 @@ namespace
             return;
         link->SetPath(target.c_str());
         link->SetWorkingDirectory(target.parent_path().c_str());
-        link->SetDescription(L"Conan Recompiled");
+        link->SetDescription(L"Fight Night Champion Recompiled");
         IPersistFile* file = nullptr;
         if (SUCCEEDED(link->QueryInterface(IID_IPersistFile, reinterpret_cast<void**>(&file))))
         {
-            file->Save((fs::path(desktop) / L"Conan Recompiled.lnk").c_str(), TRUE);
+            file->Save((fs::path(desktop) / L"Fight Night Champion Recompiled.lnk").c_str(), TRUE);
             file->Release();
         }
         link->Release();
@@ -444,11 +444,11 @@ namespace
                 std::lock_guard lock(s_logLock);
                 s_logFile.open(root / "setup.log", std::ios::app);
             }
-            Log(L"Conan Recompiled Setup, installing to " + root.wstring());
-            fs::path repo = root / L"conan-recomp";
+            Log(L"Fight Night Champion Recompiled Setup, installing to " + root.wstring());
+            fs::path repo = root / L"fightnight-recomp";
             bool haveGame = fs::exists(repo / L"game" / L"extracted" / L"default.xex", ec);
             if (!haveGame && (iso.empty() || !fs::exists(iso, ec)))
-                Fail(L"Choose your Conan disc image (.iso) or extracted disc folder first.");
+                Fail(L"Choose your Fight Night Champion disc image (.iso) or extracted disc folder first.");
             ULARGE_INTEGER freeBytes{};
             GetDiskFreeSpaceExW(root.c_str(), &freeBytes, nullptr, nullptr);
             uint64_t need = (haveGame ? 6ull : 12ull) << 30;
@@ -533,11 +533,11 @@ namespace
                      L"launcher, or a GitHub issue with setup.log attached, gets it looked at.");
 
             // 4. Done
-            s_installed = repo / L"build" / L"runtime" / L"ConanLauncher.exe";
-            if (!fs::exists(s_installed, ec)) Fail(L"The build finished but ConanLauncher.exe isn't there.");
+            s_installed = repo / L"build" / L"runtime" / L"FightNightLauncher.exe";
+            if (!fs::exists(s_installed, ec)) Fail(L"The build finished but FightNightLauncher.exe isn't there.");
             if (c.shortcut) MakeShortcut(s_installed);
             message = L"Done. Start the game with the launcher" +
-                      std::wstring(c.shortcut ? L" (\"Conan Recompiled\" on the desktop)." : L".");
+                      std::wstring(c.shortcut ? L" (\"Fight Night Champion Recompiled\" on the desktop)." : L".");
 
             // 5. Clean up, if asked.
             if (c.cleanup)
@@ -561,7 +561,7 @@ namespace
                 fs::remove(iso, ec);
                 Log(ec ? L"Couldn't delete the disc image " + iso.wstring() : L"Deleted the disc image " + iso.wstring());
                 if (!ec)
-                    message += L"\n\nThe disc image was deleted (the game's files are in conan-recomp\\game\\extracted).";
+                    message += L"\n\nThe disc image was deleted (the game's files are in fightnight-recomp\\game\\extracted).";
             }
             ok = true;
         }
@@ -651,7 +651,7 @@ namespace
     {
         fs::path dir = PickFolder();
         if (!dir.empty())
-            SetWindowTextW(Item(kDir), (dir.filename() == L"Conan-Recomp" ? dir : dir / L"Conan-Recomp").c_str());
+            SetWindowTextW(Item(kDir), (dir.filename() == L"FightNight-Recomp" ? dir : dir / L"FightNight-Recomp").c_str());
     }
 
     // The source choice: ISO or folder (the "delete the disc image" option only
@@ -661,7 +661,7 @@ namespace
         bool folder = FromFolder();
         SetWindowTextW(Item(kSourceNote), folder
                            ? L"The folder with default.xex, levels, sounds, textures... (from extract-xiso, Xenia, etc.). It's copied."
-                           : L"A dump of your own Xbox 360 disc of Conan (2007).");
+                           : L"A dump of your own Xbox 360 disc of Fight Night Champion (2011).");
         EnableWindow(Item(kDeleteIso), !folder && !s_busy);
         if (folder)
             SendMessageW(Item(kDeleteIso), BM_SETCHECK, BST_UNCHECKED, 0);
@@ -748,7 +748,7 @@ namespace
         if (std::any_of(d.begin(), d.end(), [](wchar_t c) { return c > 127; }) &&
             MessageBoxW(s_window,
                         L"The folder's path has non-English characters, which some build tools can't handle. "
-                        L"A folder like C:\\Conan-Recomp is safer. Continue anyway?",
+                        L"A folder like C:\\FightNight-Recomp is safer. Continue anyway?",
                         kTitle, MB_YESNO | MB_ICONWARNING) != IDYES)
             return;
         auto checked = [](int id) { return SendMessageW(Item(id), BM_GETCHECK, 0, 0) == BST_CHECKED; };
@@ -882,16 +882,16 @@ namespace
 
     fs::path DefaultFolder()
     {
-        // Next to an existing install if Setup sits in one; otherwise C:\Conan-Recomp
+        // Next to an existing install if Setup sits in one; otherwise C:\FightNight-Recomp
         // (short, no spaces - the build tools like that best).
         wchar_t self[MAX_PATH];
         GetModuleFileNameW(nullptr, self, MAX_PATH);
         fs::path here = fs::path(self).parent_path();
         std::error_code ec;
-        if (fs::exists(here / L"conan-recomp" / L".git", ec)) return here;
+        if (fs::exists(here / L"fightnight-recomp" / L".git", ec)) return here;
         wchar_t drive[8] = L"C:";
         GetEnvironmentVariableW(L"SystemDrive", drive, 8);
-        return fs::path(std::wstring(drive) + L"\\Conan-Recomp");
+        return fs::path(std::wstring(drive) + L"\\FightNight-Recomp");
     }
 }
 
@@ -915,7 +915,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show)
     wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
     wc.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_BTNFACE + 1);
     wc.hIcon = LoadIconW(instance, MAKEINTRESOURCEW(1));
-    wc.lpszClassName = L"ConanSetup";
+    wc.lpszClassName = L"FightNightSetup";
     RegisterClassW(&wc);
     // --update <folder>: the launcher's Update button (update and rebuild, then
     // back to the launcher).
@@ -928,7 +928,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show)
     LocalFree(argv);
     s_updateMode = !updateRoot.empty();
 
-    s_window = CreateWindowW(L"ConanSetup", kTitle, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
+    s_window = CreateWindowW(L"FightNightSetup", kTitle, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
                              CW_USEDEFAULT, CW_USEDEFAULT, 100, 100, nullptr, nullptr, instance, nullptr);
     LOGFONTW title = ncm.lfMessageFont;
     title.lfHeight = title.lfHeight * 3 / 2;
@@ -939,15 +939,15 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show)
     HWND icon = Make(L"STATIC", L"", SS_ICON, 16, 12, 48, 48, 0);
     SendMessageW(icon, STM_SETICON,
                  WPARAM(LoadImageW(instance, MAKEINTRESOURCEW(1), IMAGE_ICON, 48, 48, LR_DEFAULTCOLOR)), 0);
-    HWND name = Make(L"STATIC", L"Conan Recompiled Setup", 0, 76, 14, 540, 26, 0);
+    HWND name = Make(L"STATIC", L"Fight Night Champion Recompiled Setup", 0, 76, 14, 540, 26, 0);
     SendMessageW(name, WM_SETFONT, WPARAM(s_titleFont), TRUE);
     Make(L"STATIC",
-         L"Builds the game from your own copy of Conan. The build tools are downloaded if they aren't installed; "
+         L"Builds the game from your own copy of Fight Night Champion. The build tools are downloaded if they aren't installed; "
          L"nothing from the game is downloaded.",
          0, 76, 40, 548, 32, 0);
 
     // 1. The game
-    Make(L"BUTTON", L"Your copy of Conan", BS_GROUPBOX, 12, 78, 616, 96, kSourceGroup);
+    Make(L"BUTTON", L"Your copy of Fight Night Champion", BS_GROUPBOX, 12, 78, 616, 96, kSourceGroup);
     HWND fromIso = Make(L"BUTTON", L"Disc image (.iso)", BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP, 28, 98, 150, 20, kFromIso);
     Make(L"BUTTON", L"Extracted disc folder", BS_AUTORADIOBUTTON, 190, 98, 190, 20, kFromFolder);
     SendMessageW(fromIso, BM_SETCHECK, BST_CHECKED, 0);
@@ -991,7 +991,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show)
 
     // Already installed there: offer an update (no disc needed).
     std::error_code ec;
-    fs::path existing = fs::path(Text(kDir)) / L"conan-recomp";
+    fs::path existing = fs::path(Text(kDir)) / L"fightnight-recomp";
     if (fs::exists(existing / L"game" / L"extracted" / L"default.xex", ec))
     {
         SetWindowTextW(Item(kInstall), L"Update");

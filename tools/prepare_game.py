@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Extract your Conan disc image into game/extracted/ and sanity-check it.
+"""Extract your Fight Night Champion disc image into game/extracted/ and sanity-check it.
 
 Usage:  python tools/prepare_game.py "path/to/Conan (World) (En,Fr,De,Es,It).iso"
         python tools/prepare_game.py "path/to/an already extracted disc folder"
@@ -11,7 +11,7 @@ import os, shutil, struct, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import xdvdfs_extract as xd
 
-EXPECTED_TITLE_ID = 0x545107DA
+EXPECTED_TITLE_ID = 0x45410915
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(REPO, "game", "extracted")
 
@@ -30,7 +30,7 @@ def copy_folder(src):
     src = find_xex_folder(os.path.abspath(src))
     if not src:
         sys.exit("No default.xex in that folder (or one or two levels below it). Choose the folder of your "
-                 "extracted Conan disc: the one with default.xex, levels, sounds, textures...")
+                 "extracted Fight Night Champion disc: the one with default.xex, data, databigs...")
     if os.path.abspath(src) == os.path.abspath(OUT):
         print("   already in place")
         return
@@ -55,7 +55,7 @@ def copy_folder(src):
         done += n
         print(f"\r  {done * 100 // max(total, 1):3d}%  {rel[:60]:60}", end="", flush=True)
     print()
-    for want in ("levels", "sounds", "textures"):
+    for want in ("data", "databigs"):
         if not os.path.isdir(os.path.join(OUT, want)):
             print(f"WARNING: there's no {want} folder: the extracted disc may be incomplete.")
 
@@ -116,7 +116,7 @@ def check_xex():
     hdr = {k: v for k, v in (struct.unpack_from(">II", xex, 24 + i * 8) for i in range(n))}
     tid, = struct.unpack_from(">I", xex, hdr[0x40006] + 12)
     if tid != EXPECTED_TITLE_ID:
-        print(f"WARNING: title ID {tid:08X} is not Conan ({EXPECTED_TITLE_ID:08X}); "
+        print(f"WARNING: title ID {tid:08X} is not Fight Night Champion ({EXPECTED_TITLE_ID:08X}); "
               "the config's addresses will not match.")
     else:
         print(f"OK: Conan (title {tid:08X}) extracted to {OUT}")
