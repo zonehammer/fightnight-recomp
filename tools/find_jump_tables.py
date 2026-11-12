@@ -169,6 +169,11 @@ def evaluate(img, ranges, cmp_addr, idx_reg):
         elif op in (36, 38, 44, 37, 39, 45, 62, 54, 52, 4):  # stores / vector: no GPR result we track
             if op in (37, 39, 45):              # update forms write rA
                 kill(rA)
+        elif op in (48, 49, 50, 51, 53, 55, 59, 63):  # FPU loads/stores/arithmetic: write FPRs only
+            if op in (49, 51, 53, 55):          # update forms write rA
+                kill(rA)
+        elif op in (20, 23, 25, 26, 27, 28, 29, 30):  # rlwimi/rlwnm/oris/xori/xoris/andi./andis./rld*: write rA
+            kill(rA)
         else:
             kill(rD)
 

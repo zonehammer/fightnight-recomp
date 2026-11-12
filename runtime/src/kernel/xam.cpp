@@ -58,6 +58,13 @@ GUEST_IMPORT(ExGetXConfigSetting)
 // Modules
 // ---------------------------------------------------------------------------
 
+// A handle for xam.xex: XexGetProcedureAddress gives our implementations of
+// the exports titles look up (content "internal" functions).
+constexpr uint32_t kXamModuleHandle = 0x8000DA00;
+PPC_EXTERN_FUNC(XamContentCreateInternal);
+PPC_EXTERN_FUNC(XamContentDeleteInternal);
+PPC_EXTERN_FUNC(XamContentAggregateCreateEnumerator);
+
 // XexGetModuleHandle(const char* name, HANDLE* out)
 GUEST_IMPORT(XexGetModuleHandle)
 {
@@ -65,6 +72,8 @@ GUEST_IMPORT(XexGetModuleHandle)
     uint32_t h = 0;
     if (name.empty() || name == "default.xex")
         h = g_module.ldrEntry;
+    else if (name == "xam.xex")
+        h = kXamModuleHandle;
     else
         Log("XexGetModuleHandle(\"%s\"): not available", name.c_str());
     if (Arg(ctx, 1))
@@ -75,6 +84,31 @@ GUEST_IMPORT(XexGetModuleHandle)
 // XexGetProcedureAddress(module, ordinal, void** out)
 GUEST_IMPORT(XexGetProcedureAddress)
 {
+    if (Arg(ctx, 0) == kXamModuleHandle)
+    {
+        // Our own implementations of xam.xex exports, each given a guest
+        // address the title can call: words in the data block at the end of
+        // .text, which is never executed (the function table is separate).
+        struct Export { uint32_t ordinal; PPCFunc* func; const char* name; };
+        static const Export kExports[] = {
+            { 0x270, XamContentDeleteInternal, "XamContentDeleteInternal" },
+            { 0x271, XamContentCreateInternal, "XamContentCreateInternal" },
+            { 0x279, XamContentAggregateCreateEnumerator, "XamContentAggregateCreateEnumerator" },
+        };
+        for (size_t i = 0; i < std::size(kExports); i++)
+        {
+            if (kExports[i].ordinal != Arg(ctx, 1))
+                continue;
+            uint32_t address = uint32_t(PPC_CODE_BASE + PPC_CODE_SIZE) - 0x10 - uint32_t(i) * 4;
+            PPC_LOOKUP_FUNC(base, address) = kExports[i].func;
+            static int logged = 0;
+            if (logged++ < 10)
+                Log("XexGetProcedureAddress(xam.xex, 0x%X): %s at 0x%08X", Arg(ctx, 1), kExports[i].name, address);
+            if (Arg(ctx, 2))
+                St32(Arg(ctx, 2), address);
+            return Ret(ctx, STATUS_SUCCESS);
+        }
+    }
     Log("XexGetProcedureAddress(module 0x%08X, ordinal/name 0x%08X): not supported", Arg(ctx, 0), Arg(ctx, 1));
     if (Arg(ctx, 2))
         St32(Arg(ctx, 2), 0);

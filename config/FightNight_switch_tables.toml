@@ -1,4 +1,4 @@
-# 304 jump tables found by tools/find_jump_tables.py (1829 other bctr sites are indirect tail calls)
+# 305 jump tables found by tools/find_jump_tables.py
 [[switch]]
 base = 0x8229FC98
 r = 11
@@ -9882,5 +9882,37 @@ labels = [
     0x82EB04F0,
     0x82EB0534,
     0x82EB0510,
+]
+
+[[switch]]
+base = 0x825745C0
+r = 30
+default = 0x8257488C
+labels = [
+    0x825745F0,
+    0x82574618,
+    0x82574634,
+    0x825745C4,
+    0x82574664,
+    0x8257467C,
+    0x82574684,
+    0x825746C8,
+    0x82574718,
+    0x82574720,
+    0x82574728,
+    0x82574710,
+    0x82574730,
+    0x82574738,
+    0x82574740,
+    0x82574770,
+    0x8257485C,
+    0x8257486C,
+    0x825747B0,
+    0x825747E8,
+    0x82574808,
+    0x82574838,
+    0x825747A0,
+    0x825747D8,
+    0x82574804,
 ]
 

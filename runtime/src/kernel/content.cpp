@@ -277,6 +277,69 @@ GUEST_IMPORT(XamContentDelete)
     Ret(ctx, Finish(Arg(ctx, 2), result));
 }
 
+// ---------------------------------------------------------------------------
+// xam.xex exports titles look up themselves (XexGetProcedureAddress): the
+// "internal" content functions, which take XCONTENT_AGGREGATE_DATA (an
+// XCONTENT_DATA, then a u64 and the title id) and no user.
+// ---------------------------------------------------------------------------
+// XamContentCreateInternal(root_name, XCONTENT_AGGREGATE_DATA*, flags, disposition*, license_mask*,
+//                          cache_size, u64 content_size, overlapped): XamContentCreateEx without the user.
+PPC_FUNC(XamContentCreateInternal)
+{
+    ctx.r11.u64 = ctx.r10.u64;
+    ctx.r10.u64 = ctx.r9.u64;
+    ctx.r9.u64 = ctx.r8.u64;
+    ctx.r8.u64 = ctx.r7.u64;
+    ctx.r7.u64 = ctx.r6.u64;
+    ctx.r6.u64 = ctx.r5.u64;
+    ctx.r5.u64 = ctx.r4.u64;
+    ctx.r4.u64 = ctx.r3.u64;
+    ctx.r3.u64 = 0xFE;
+    __imp__XamContentCreateEx(ctx, base);
+}
+
+// XamContentDeleteInternal(XCONTENT_AGGREGATE_DATA*, overlapped)
+PPC_FUNC(XamContentDeleteInternal)
+{
+    ctx.r5.u64 = ctx.r4.u64;
+    ctx.r4.u64 = ctx.r3.u64;
+    ctx.r3.u64 = 0xFE;
+    __imp__XamContentDelete(ctx, base);
+}
+
+// XamContentAggregateCreateEnumerator(u64 xuid, device_id, content_type, unknown, handle*):
+// the title's content of that type, one XCONTENT_AGGREGATE_DATA (0x148) per item.
+PPC_FUNC(XamContentAggregateCreateEnumerator)
+{
+    uint32_t device = Arg(ctx, 1), type = Arg(ctx, 2), handlePtr = Arg(ctx, 4);
+    if ((device && device != kHddDeviceId) || !handlePtr)
+        return Ret(ctx, 0x80070057); // E_INVALIDARG
+    constexpr uint32_t kAggregateSize = 0x148;
+    auto e = std::make_shared<KEnumerator>(kAggregateSize, 1);
+    std::error_code ec;
+    for (auto& entry : fs::directory_iterator(TypeDir(type), ec))
+    {
+        if (!entry.is_directory(ec))
+            continue;
+        ContentData d;
+        d.deviceId = kHddDeviceId;
+        d.type = type;
+        d.fileName = entry.path().filename().string();
+        d.displayName = LoadDisplayName(TypeDir(type) / (d.fileName + ".name"));
+        uint32_t tmp = SystemAlloc(kAggregateSize);
+        Zero(tmp, kAggregateSize);
+        WriteContentData(tmp, d);
+        St32(tmp + 0x140, g_module.titleId);
+        std::vector<uint8_t> item(kAggregateSize);
+        std::memcpy(item.data(), HostPtr(tmp), kAggregateSize);
+        SystemFree(tmp);
+        e->items.push_back(std::move(item));
+    }
+    Log("XamContentAggregateCreateEnumerator(device %u, type %08X): %zu items", device, type, e->items.size());
+    St32(handlePtr, CreateHandle(e));
+    Ret(ctx, ERROR_SUCCESS);
+}
+
 // XamContentCreateEnumerator(user, device_id, content_type, flags, items_per_enum, buffer_size*, handle*)
 GUEST_IMPORT(XamContentCreateEnumerator)
 {
