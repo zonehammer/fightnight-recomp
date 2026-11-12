@@ -353,6 +353,17 @@ GUEST_IMPORT(NetDll_inet_addr)
 // never waited on (WSA_INVALID_EVENT = 0).
 GUEST_IMPORT(NetDll_WSACreateEvent) { Ret(ctx, 0); }
 GUEST_IMPORT(NetDll_WSACloseEvent) { Ret(ctx, 1); }
+GUEST_IMPORT(NetDll_WSAResetEvent) { Ret(ctx, 1); }
+GUEST_IMPORT(NetDll_WSASetEvent) { Ret(ctx, 1); }
+// WSAWaitForMultipleEvents(caller, count, events, waitAll, timeout ms, alertable):
+// there is no network, so nothing is ever signalled: it waits out the timeout
+// (an infinite one in steps, so the thread doesn't spin) and reports a timeout.
+GUEST_IMPORT(NetDll_WSAWaitForMultipleEvents)
+{
+    uint32_t timeout = Arg(ctx, 4);
+    os::SleepNs(uint64_t(timeout == 0xFFFFFFFF ? 100 : std::min<uint32_t>(timeout, 1000)) * 1000000ull);
+    Ret(ctx, 0x102);   // WSA_WAIT_TIMEOUT
+}
 GUEST_IMPORT(NetDll_XNetDnsLookup)
 {
     if (uint32_t out = Arg(ctx, 3))

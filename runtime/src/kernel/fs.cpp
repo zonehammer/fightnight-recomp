@@ -361,7 +361,15 @@ namespace
         std::string guest = PathFromObjectAttributes(objAttr);
         Resolved r = ResolveGuestPath(guest);
         auto fail = [&](uint32_t status) {
-            Log("open \"%s\" -> 0x%08X", guest.c_str(), status);
+            static int detailed = 0;
+            if (detailed < 40)
+            {
+                detailed++;
+                Log("open \"%s\" -> 0x%08X (access 0x%X, disposition %u, options 0x%X)%s", guest.c_str(), status, access,
+                    disposition, options, CurrentGuestStack().c_str());
+            }
+            else
+                Log("open \"%s\" -> 0x%08X", guest.c_str(), status);
             if (ioStatus) { St32(ioStatus, status); St32(ioStatus + 4, 0); }
             return status;
         };
