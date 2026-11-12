@@ -900,6 +900,21 @@ static void UpdatePauseQuit(PPCContext& ctx)
             lastMenu = menu;
         }
     }
+#elif GAME_FNC
+    // Fight Night: the PauseManager (global at 0x82FCA584, made by
+    // sub_822AB0B0) has its "paused" byte at +22 (read by sub_822AA690).
+    {
+        uint32_t pm = Ld32(0x82FCA584);
+        paused = pm && Ld8(pm + 22) != 0;
+        static bool last = false;
+        static int logged = 0;
+        if (paused != last && logged < 100)
+        {
+            logged++;
+            Log("Pause: %s", paused ? "on" : "off");
+        }
+        last = paused;
+    }
 #endif
     photo::SetPauseMenu(paused);
     bool back = paused && (g_guestPadButtons.load() & 0x0020) && !renderer::OverlayOpen();

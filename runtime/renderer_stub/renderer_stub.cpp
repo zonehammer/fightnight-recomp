@@ -17,6 +17,7 @@ namespace wet::renderer
     void SetShaderCacheRoot(const std::string&) {}
     void SetCursorHidden(bool) {}
     void SetVsyncRate(uint32_t) {}
+    void SetResolveReadback(bool) {}
     uint32_t EarlyVblanks() { return 0; }
     bool GpuTimes(uint64_t*, uint64_t& frames) { frames = 0; return false; }
     bool VideoMemory(uint64_t&, uint64_t&) { return false; }

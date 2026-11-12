@@ -1767,7 +1767,9 @@ namespace wet::renderer
         // fighters' clothing on the GPU, then reads it): read back into guest
         // memory. WET_READBACK_RESOLVE=0/1 overrides.
         {
-            int readback = GAME_FNC ? 1 : 0;
+            // Fight Night turns it on only while it recolours kit (fnc_game.cpp):
+            // reading every resolve back corrupted game memory now and then.
+            int readback = 0;
             if (const char* v = std::getenv("WET_READBACK_RESOLVE"))
                 readback = std::atoi(v);
             xe::gpu::d3d12::wet_readback_resolve = readback;
@@ -1937,6 +1939,15 @@ namespace wet::renderer
         static const bool off = std::getenv("WET_NO_ADAPTIVE_VBLANK") != nullptr;
         // WET only: tuned for one vblank per frame (Conan waits for two).
         xe::gpu::wet_adaptive_vblank = GAME_WET && !off && wet::options::Fps() > 30;
+    }
+
+    void SetResolveReadback(bool on)
+    {
+#if WET_HAVE_D3D12
+        static const bool forced = std::getenv("WET_READBACK_RESOLVE") != nullptr;
+        if (!forced)
+            xe::gpu::d3d12::wet_readback_resolve = on ? 1 : 0;
+#endif
     }
 
     uint32_t EarlyVblanks() { return xe::gpu::wet_early_vblanks.load(std::memory_order_relaxed); }

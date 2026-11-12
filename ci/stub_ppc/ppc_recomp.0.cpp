@@ -115,6 +115,9 @@ PPC_FUNC_IMPL(__imp__sub_824F58F0) {
 	PPC_FUNC_PROLOGUE();
 }
 // Fight Night Champion (fnc_debug.cpp, fnc_game.cpp).
+PPC_FUNC_IMPL(__imp__sub_826BED10) {
+	PPC_FUNC_PROLOGUE();
+}
 PPC_FUNC_IMPL(__imp__sub_827C6380) {
 	PPC_FUNC_PROLOGUE();
 }
