@@ -82,6 +82,7 @@
 DECLARE_bool(log_to_stdout);
 DECLARE_bool(host_present_from_non_ui_thread);
 DECLARE_int32(log_level);
+DECLARE_bool(gpu_allow_invalid_fetch_constants);
 DECLARE_int32(draw_resolution_scale_x);
 DECLARE_int32(draw_resolution_scale_y);
 #if WET_HAVE_D3D12
@@ -1664,6 +1665,10 @@ namespace wet::renderer
         cvars::draw_resolution_scale_x = int32_t(s_resolutionScale);
         cvars::draw_resolution_scale_y = int32_t(s_resolutionScale);
         cvars::texture_cache_memory_limit_render_to_texture = 64;
+        // Fight Night binds textures whose fetch constants have the "invalid"
+        // type: Xenia skipped them (and logged a warning per draw, hundreds of
+        // thousands a session). Xenia Canary now uses them by default.
+        cvars::gpu_allow_invalid_fetch_constants = GAME_FNC != 0;
         // EDRAM emulation: render targets (Xenia's default on NVIDIA/AMD) or
         // rasterizer-ordered views, which need no render target copies.
 #if WET_HAVE_D3D12

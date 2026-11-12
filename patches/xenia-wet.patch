@@ -4348,7 +4348,7 @@ index ffc8eeffa..54961f444 100644
    uint32_t primary_buffer_ptr_ = 0;
    uint32_t primary_buffer_size_ = 0;
 diff --git a/src/xenia/gpu/d3d12/d3d12_command_processor.cc b/src/xenia/gpu/d3d12/d3d12_command_processor.cc
-index 0ec70a7d1..702f30a01 100644
+index 0ec70a7d1..23099aa15 100644
 --- a/src/xenia/gpu/d3d12/d3d12_command_processor.cc
 +++ b/src/xenia/gpu/d3d12/d3d12_command_processor.cc
 @@ -8,6 +8,9 @@
@@ -5275,7 +5275,7 @@ index 0ec70a7d1..702f30a01 100644
  bool D3D12CommandProcessor::CanEndSubmissionImmediately() const {
    return !submission_open_ || !pipeline_cache_->IsCreatingPipelines();
  }
-@@ -4311,6 +5031,186 @@ bool D3D12CommandProcessor::UpdateBindings(const D3D12Shader* vertex_shader,
+@@ -4311,6 +5031,197 @@ bool D3D12CommandProcessor::UpdateBindings(const D3D12Shader* vertex_shader,
    return true;
  }
  
@@ -5283,6 +5283,17 @@ index 0ec70a7d1..702f30a01 100644
 +void D3D12CommandProcessor::WetReadbackResolve(
 +    uint32_t written_address, uint32_t written_length,
 +    reg::RB_COPY_DEST_INFO copy_dest_info, bool is_scaled) {
++  // Never the front buffers: the CPU doesn't read them, and the copy left a
++  // loading screen in guest memory that flashed up whenever a frame was
++  // shown from memory.
++  for (uint32_t fb = 0; fb < 2; ++fb) {
++    uint32_t fb_first = wet_front_buffer_first[fb].load(std::memory_order_relaxed);
++    uint32_t fb_last = wet_front_buffer_last[fb].load(std::memory_order_relaxed);
++    if (fb_last && written_address <= fb_last &&
++        written_address + written_length - 1 >= fb_first) {
++      return;
++    }
++  }
 +  {
 +    WetResolveStreak& streak =
 +        wet_resolve_streaks_[(uint64_t(written_address) << 32) |
@@ -5462,7 +5473,7 @@ index 0ec70a7d1..702f30a01 100644
  ID3D12Resource* D3D12CommandProcessor::RequestReadbackBuffer(uint32_t size) {
    if (size == 0) {
      return nullptr;
-@@ -4359,6 +5259,491 @@ void D3D12CommandProcessor::WriteGammaRampSRV(
+@@ -4359,6 +5270,491 @@ void D3D12CommandProcessor::WriteGammaRampSRV(
    device->CreateShaderResourceView(gamma_ramp_buffer_.Get(), &desc, handle);
  }
  

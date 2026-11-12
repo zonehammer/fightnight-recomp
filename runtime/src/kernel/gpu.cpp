@@ -909,7 +909,8 @@ static void UpdatePauseQuit(PPCContext& ctx)
         // Movies pause the game too: no quit hint while one plays. The 14
         // pause reasons (bytes at +23) are logged as they change.
         uint32_t pm = Ld32(0x82FCA584);
-        paused = pm && Ld8(pm + 22) != 0 && !MoviePlaying();
+        // Pause reason 5 is the pause menu (12: a movie).
+        paused = pm && Ld8(pm + 22) != 0 && Ld8(pm + 23 + 5) != 0 && !MoviePlaying();
         if (pm)
         {
             static uint32_t lastReasons = ~0u;
