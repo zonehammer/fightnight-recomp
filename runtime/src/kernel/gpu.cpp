@@ -794,8 +794,15 @@ constexpr uint32_t kPm4XeSwap = 0x64;
 // Every 10 s: the frame rate the game actually reached, its slowest frame and
 // how many frames took longer than the target, so a slow stretch shows up in
 // fightnight.log (on any PC) without an overlay.
+#if GAME_FNC
+namespace wet::fnc { void FrameTick(); }
+#endif
+
 static void NotePerformance()
 {
+#if GAME_FNC
+    wet::fnc::FrameTick();
+#endif
     using clock = std::chrono::steady_clock;
     static clock::time_point start, last;
     static uint32_t frames = 0, over = 0;

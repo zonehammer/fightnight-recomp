@@ -401,4 +401,27 @@ GUEST_IMPORT(XMAIsInputBuffer1Valid) { Context c; c.Load(Arg(ctx, 0)); Ret(ctx, 
 GUEST_IMPORT(XMAIsOutputBufferValid) { Context c; c.Load(Arg(ctx, 0)); Ret(ctx, c.OutValid()); }
 GUEST_IMPORT(XMASetInputBuffer0Valid) { XmaTrace("in0 valid", Arg(ctx, 0), 0, uint32_t(ctx.lr)); Modify(Arg(ctx, 0), [](Context& c) { c.SetInputValid(0, true); }); Ret(ctx, 0); }
 GUEST_IMPORT(XMASetInputBuffer1Valid) { XmaTrace("in1 valid", Arg(ctx, 0), 0, uint32_t(ctx.lr)); Modify(Arg(ctx, 0), [](Context& c) { c.SetInputValid(1, true); }); Ret(ctx, 0); }
+// XMASetInputBuffer0/1(context*, buffer, packet_count): a new input buffer
+// (streamed sounds refill these as they play; Fight Night's crowds and
+// commentary). Pointer and packet count only; the game sets it valid after.
+GUEST_IMPORT(XMASetInputBuffer0)
+{
+    uint32_t buffer = Arg(ctx, 1), packets = Arg(ctx, 2);
+    XmaTrace("in0 buffer", Arg(ctx, 0), buffer, uint32_t(ctx.lr));
+    Modify(Arg(ctx, 0), [buffer, packets](Context& c) {
+        c.w[5] = buffer ? ViewToPhysical(buffer) : 0;
+        Context::Set(c.w[0], 0, 12, packets);
+    });
+    Ret(ctx, 0);
+}
+GUEST_IMPORT(XMASetInputBuffer1)
+{
+    uint32_t buffer = Arg(ctx, 1), packets = Arg(ctx, 2);
+    XmaTrace("in1 buffer", Arg(ctx, 0), buffer, uint32_t(ctx.lr));
+    Modify(Arg(ctx, 0), [buffer, packets](Context& c) {
+        c.w[6] = buffer ? ViewToPhysical(buffer) : 0;
+        Context::Set(c.w[1], 0, 12, packets);
+    });
+    Ret(ctx, 0);
+}
 GUEST_IMPORT(XMASetOutputBufferValid) { Modify(Arg(ctx, 0), [](Context& c) { c.SetOutValid(true); }); Ret(ctx, 0); }
