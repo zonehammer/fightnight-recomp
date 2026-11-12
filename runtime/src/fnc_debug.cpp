@@ -5,6 +5,9 @@
 #include "log.h"
 #include "ppc_context.h"
 
+#include <cstdio>
+#include <string>
+
 #if GAME_FNC
 using namespace wet;
 
@@ -37,6 +40,38 @@ PPC_FUNC(sub_82EB5748)
             }
             Log("T3db: query on database %08X failed with error %u (status at %08X); query %08X \"%s\"%s", db,
                 status ? Ld32(status + 4) : 0xFFFFFFFFu, status, query, text, CurrentGuestStack().c_str());
+            if (db && logged == 1)
+            {
+                // The database's tables: a list from +12, next at +4, the
+                // table's short name at +32.
+                std::string names;
+                uint32_t count = 0;
+                for (uint32_t t = Ld32(db + 12); t && count < 120; t = Ld32(t + 4), count++)
+                {
+                    char nm[8];
+                    uint32_t v = Ld32(t + 32);
+                    snprintf(nm, sizeof nm, "%c%c%c%c", char(v >> 24), char(v >> 16), char(v >> 8), char(v));
+                    names += ' ';
+                    names += nm;
+                    if (count < 3 || t == 0)
+                    {
+                        char b[160];
+                        snprintf(b, sizeof b, "(%08X: %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X)", t, Ld32(t),
+                                 Ld32(t + 4), Ld32(t + 8), Ld32(t + 12), Ld32(t + 16), Ld32(t + 20), Ld32(t + 24),
+                                 Ld32(t + 28), Ld32(t + 36), Ld32(t + 40));
+                        names += b;
+                    }
+                }
+                std::string head;
+                for (uint32_t i = 0; i < 64; i += 4)
+                {
+                    char b[12];
+                    snprintf(b, sizeof b, " %08X", Ld32(db + i));
+                    head += b;
+                }
+                Log("T3db: database %08X:%s", db, head.c_str());
+                Log("T3db: %u tables:%s", count, names.c_str());
+            }
         }
     }
 }
