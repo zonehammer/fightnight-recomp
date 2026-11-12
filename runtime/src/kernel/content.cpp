@@ -441,6 +441,38 @@ GUEST_IMPORT(XamUserCreateAchievementEnumerator)
     Ret(ctx, CreateEnumeratorHandle(e, Arg(ctx, 6), Arg(ctx, 7)));
 }
 
+// XamCreateEnumeratorHandle(user, app_id, open_message, close_message,
+// private_size, item_count, flags, handle*): an enumerator an XAM app fills
+// through messages (Fight Night: marketplace offers, app 0xFA). Made empty, with
+// the zeroed private block the caller writes its request into.
+GUEST_IMPORT(XamCreateEnumeratorHandle)
+{
+    uint32_t privateSize = Arg(ctx, 4), count = Arg(ctx, 5), handlePtr = Arg(ctx, 7);
+    Log("XamCreateEnumeratorHandle(user %08X, app %X, messages %08X/%08X, private %u bytes, %u items)", Arg(ctx, 0),
+        Arg(ctx, 1), Arg(ctx, 2), Arg(ctx, 3), privateSize, count);
+    if (!handlePtr)
+        return Ret(ctx, ERROR_INVALID_PARAMETER);
+    auto e = std::make_shared<KEnumerator>(0, count ? count : 1);
+    if (privateSize)
+    {
+        e->privateData = SystemAlloc(privateSize);
+        std::memset(HostPtr(e->privateData), 0, privateSize);
+    }
+    St32(handlePtr, CreateHandle(e));
+    Ret(ctx, ERROR_SUCCESS);
+}
+
+// XamGetPrivateEnumStructureFromHandle(handle, private_data*)
+GUEST_IMPORT(XamGetPrivateEnumStructureFromHandle)
+{
+    auto e = std::dynamic_pointer_cast<KEnumerator>(LookupHandle(Arg(ctx, 0)));
+    if (!e)
+        return Ret(ctx, ERROR_INVALID_HANDLE);
+    if (Arg(ctx, 1))
+        St32(Arg(ctx, 1), e->privateData);
+    Ret(ctx, ERROR_SUCCESS);
+}
+
 // XamEnumerate(handle, flags, buffer, buffer_length, items_returned*, overlapped)
 GUEST_IMPORT(XamEnumerate)
 {
