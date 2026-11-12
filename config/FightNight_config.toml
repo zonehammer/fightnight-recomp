@@ -27,6 +27,8 @@ savevmx_64_address   = 0x82C72194
 # Functions whose branches or switch tables leave the analyser's bounds
 # (see tools/fix_switch_bounds.py).
 functions = [
+    # memset: its last bytes (after a bdzlr) were cut off into separate functions.
+    { address = 0x8229B3F0, size = 0xA0 },
     { address = 0x822996D8, size = 0x5C4 },
     { address = 0x8229A898, size = 0x850 },
     { address = 0x8229AF4C, size = 0x19C },
