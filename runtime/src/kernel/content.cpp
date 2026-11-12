@@ -186,6 +186,15 @@ GUEST_IMPORT(XamContentGetDeviceState)
     Ret(ctx, Finish(ov, ERROR_SUCCESS));
 }
 
+// XamContentGetLicenseMask(mask*, overlapped): the title's licences (bits)
+// for its downloadable content; none, as Xenia reports.
+GUEST_IMPORT(XamContentGetLicenseMask)
+{
+    if (Arg(ctx, 0))
+        St32(Arg(ctx, 0), 0);
+    Ret(ctx, Finish(Arg(ctx, 1), ERROR_SUCCESS));
+}
+
 // XamContentCreateEx(user, root_name, XCONTENT_DATA*, flags, disposition*, license_mask*,
 //                    cache_size, u64 content_size, overlapped)
 GUEST_IMPORT(XamContentCreateEx)

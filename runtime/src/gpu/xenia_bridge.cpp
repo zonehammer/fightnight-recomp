@@ -918,6 +918,7 @@ namespace
                 if (RowCombo("Language", &pick, kNames, 6, "Text and speech. Takes effect at the next start."))
                     wet::options::SetLanguage(kIds[pick]);
             }
+#if !GAME_FNC   // Fight Night keeps its Xbox prompts
             {
                 static const char* kNames[] = { "Automatic", "Xbox", "PlayStation", "Keyboard / mouse" };
                 int pick = wet::options::ButtonPrompts();
@@ -926,6 +927,7 @@ namespace
                              "symbols with a PlayStation controller, Xbox otherwise. Takes effect at the next start."))
                     wet::options::SetButtonPrompts(pick);
             }
+#endif
             bool showFps = wet::options::ShowFps();
             if (RowCheck("FPS counter", &showFps))
                 wet::options::SetShowFps(showFps);
@@ -1643,8 +1645,7 @@ namespace wet::renderer
         // In-world button prompts (prompts.cpp) are redrawn as draws first read them.
         // (WET only: Conan has nothing to redraw there, and the check costs a few
         // percent of the GPU thread's time on every draw.)
-        // Fight Night: its button icons (prompts.cpp).
-        if (GAME_WET || GAME_FNC)
+        if (GAME_WET)
         xe::gpu::wet_texture_seen = [](uint32_t phys, uint8_t* data, uint32_t format, uint32_t w, uint32_t h,
                                        bool tiled, uint32_t endian, uint32_t pitch, uint32_t mipPhys,
                                        uint8_t* mipData, uint32_t mipSize, uint32_t baseSize) {

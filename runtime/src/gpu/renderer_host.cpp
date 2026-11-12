@@ -12,8 +12,6 @@ namespace wet::prompts
 {
     void WorldTextureSeen(uint32_t phys, uint8_t* data, uint32_t format, uint32_t w, uint32_t h, bool tiled,
                           uint32_t endian, uint32_t pitch);
-    void FncTextureSeen(uint32_t phys, uint8_t* data, uint32_t format, uint32_t w, uint32_t h, bool tiled,
-                        uint32_t endian, uint32_t pitch);
 }
 namespace wet::outfit
 {
@@ -79,8 +77,6 @@ namespace wet::renderer_host
         // WET's in-world button prompts and Rubi's textures (matched by content).
         wet::prompts::WorldTextureSeen(phys, data, format, w, h, tiled, endian, pitch);
         wet::outfit::TextureSeen(phys, data, format, baseSize, endian, mipPhys, mipData, mipSize);
-#elif GAME_FNC
-        wet::prompts::FncTextureSeen(phys, data, format, w, h, tiled, endian, pitch);
 #endif
     }
 }
