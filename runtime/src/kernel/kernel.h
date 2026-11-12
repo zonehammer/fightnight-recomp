@@ -52,6 +52,7 @@ namespace wet
     constexpr uint32_t ERROR_SUCCESS                  = 0;
     constexpr uint32_t ERROR_ACCESS_DENIED            = 5;
     constexpr uint32_t ERROR_INVALID_PARAMETER        = 87;
+    constexpr uint32_t ERROR_IO_INCOMPLETE            = 996;
     constexpr uint32_t ERROR_INSUFFICIENT_BUFFER      = 122;
     constexpr uint32_t ERROR_NO_MORE_FILES            = 18;
     constexpr uint32_t ERROR_IO_PENDING               = 997;

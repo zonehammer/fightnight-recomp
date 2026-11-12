@@ -336,7 +336,21 @@ PPC_FUNC(XamContentAggregateCreateEnumerator)
         e->items.push_back(std::move(item));
     }
     Log("XamContentAggregateCreateEnumerator(device %u, type %08X): %zu items", device, type, e->items.size());
-    St32(handlePtr, CreateHandle(e));
+    uint32_t handle = CreateHandle(e);
+    // The kernel enumerator header XAPI's XEnumerate reads (through
+    // XamGetPrivateEnumStructureFromHandle): app, open/close messages, user,
+    // items per call, flags; then the private part, here our handle. XEnumerate
+    // sends the open message to the app (XMsgInProcessCall, below).
+    e->privateData = SystemAlloc(0x20);
+    Zero(e->privateData, 0x20);
+    St32(e->privateData + 0x00, 0xFE);
+    St32(e->privateData + 0x04, 0x2000E);
+    St32(e->privateData + 0x08, 0x20010);
+    St32(e->privateData + 0x0C, 0xFF);
+    St32(e->privateData + 0x10, 1);
+    St32(e->privateData + 0x18, 0x4F626A21);   // signature
+    St32(e->privateData + 0x1C, handle);
+    St32(handlePtr, handle);
     Ret(ctx, ERROR_SUCCESS);
 }
 
@@ -422,8 +436,75 @@ GUEST_IMPORT(XMsgInProcessCall)
                 St32(p, 0);
         return Ret(ctx, ERROR_SUCCESS);
     }
+    // The content app's "enumerate" (XAPI XEnumerate on an aggregate content
+    // enumerator): args { user, ?, private*, buffer, buffer_size, ?, returned* },
+    // one XCONTENT_AGGREGATE_DATA per call.
+    if (app == 0xFE && message == 0x0002000E && args)
+    {
+        uint32_t priv = Ld32(args + 8), buffer = Ld32(args + 12), size = Ld32(args + 16), returned = Ld32(args + 24);
+        auto e = priv ? std::dynamic_pointer_cast<KEnumerator>(LookupHandle(Ld32(priv + 4))) : nullptr;
+        if (!e || !buffer)
+            return Ret(ctx, 0x80070057);
+        std::lock_guard lock(s_contentLock);
+        if (e->next >= e->items.size() || size < e->itemSize)
+        {
+            if (returned)
+                St32(returned, 0);
+            return Ret(ctx, 0x80070012);   // HRESULT_FROM_WIN32(ERROR_NO_MORE_FILES)
+        }
+        std::memcpy(HostPtr(buffer), e->items[e->next++].data(), e->itemSize);
+        if (returned)
+            St32(returned, 1);
+        return Ret(ctx, ERROR_SUCCESS);
+    }
     StubCall("XMsgInProcessCall", ctx);
 }
+
+// XMsgCompleteIORequest(overlapped, result, extended_error, length)
+GUEST_IMPORT(XMsgCompleteIORequest)
+{
+    if (Arg(ctx, 0))
+        CompleteOverlapped(Arg(ctx, 0), Arg(ctx, 1), Arg(ctx, 2), Arg(ctx, 3));
+    Ret(ctx, ERROR_SUCCESS);
+}
+
+// XamGetOverlappedResult(overlapped, length*, wait): the XOVERLAPPED's result
+// (our asynchronous requests complete from host threads; wait on its event).
+GUEST_IMPORT(XamGetOverlappedResult)
+{
+    uint32_t ov = Arg(ctx, 0), lengthPtr = Arg(ctx, 1);
+    if (!ov)
+        return Ret(ctx, ERROR_INVALID_PARAMETER);
+    for (int i = 0; Arg(ctx, 2) && Ld32(ov) == ERROR_IO_PENDING && i < 30000; i++)
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    uint32_t result = Ld32(ov);
+    if (result == ERROR_IO_PENDING)
+        return Ret(ctx, ERROR_IO_INCOMPLETE);
+    if (lengthPtr)
+        St32(lengthPtr, Ld32(ov + 4));
+    Ret(ctx, result);
+}
+
+// XamTaskSchedule(callback, param, unknown, handle*): run on the calling
+// thread straight away (titles wait for these tasks; the content ones are
+// quick), keeping the caller's registers.
+GUEST_IMPORT(XamTaskSchedule)
+{
+    uint32_t callback = Arg(ctx, 0), param = Arg(ctx, 1), handlePtr = Arg(ctx, 3);
+    static int logged = 0;
+    if (logged++ < 10)
+        Log("XamTaskSchedule(callback 0x%08X, param 0x%08X): run now", callback, param);
+    PPCContext saved = ctx;
+    ctx.r3.u64 = param;
+    ctx.r1.u64 = ctx.r1.u64 - 0x200;
+    CallGuest(ctx, callback);
+    ctx = saved;
+    if (handlePtr)
+        St32(handlePtr, 0x7A5C0001);
+    Ret(ctx, ERROR_SUCCESS);
+}
+GUEST_IMPORT(XamTaskCloseHandle) { Ret(ctx, ERROR_SUCCESS); }
+GUEST_IMPORT(XamTaskShouldExit) { Ret(ctx, 0); }
 
 // XMsgStartIORequest(app, message, overlapped, buffer, buffer_length)
 GUEST_IMPORT(XMsgStartIORequest) { XMsgRequest(ctx, "XMsgStartIORequest"); }
