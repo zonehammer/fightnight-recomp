@@ -41,6 +41,29 @@ static void ApplyRenderRate(uint32_t loop, int rate)
     PPC_STORE_U64(loop + 72, uint64_t(1e9 / rate + 0.5));
 }
 
+// Ultrawide (widescreen option, a screen or window wider than 16:9): the
+// runtime shows the 16:9 frame stretched across the screen and renders more
+// columns; the game's cameras are given the screen's aspect so the view widens
+// instead of stretching. Their default aspect is the float 16/9 at 0x820B6BC4
+// (read by the camera setup, sub_82833DE8 / sub_82D45B38, into the camera
+// parameters at +48).
+static float s_cameraAspect = 0.0f;
+
+static void ApplyCameraAspect()
+{
+    float aspect = options::Widescreen() ? renderer::DisplayAspect() : 16.0f / 9.0f;
+    if (aspect < 16.0f / 9.0f)
+        aspect = 16.0f / 9.0f;
+    if (std::fabs(aspect - s_cameraAspect) < 0.001f)
+        return;
+    s_cameraAspect = aspect;
+    uint8_t* base = g_mem.base;
+    uint32_t bits;
+    std::memcpy(&bits, &aspect, sizeof bits);
+    PPC_STORE_U32(0x820B6BC4, bits);
+    Log("Ultrawide: camera aspect %.3f", aspect);
+}
+
 extern "C" void __imp__sub_827C6380(PPCContext& ctx, uint8_t* base);
 PPC_FUNC(sub_827C6380)
 {
@@ -54,6 +77,7 @@ PPC_FUNC(sub_827C6380)
         s_renderRate = rate;
         Log("Frame rate: render loop at %d Hz (the game's own: 30), simulation unchanged", rate);
     }
+    ApplyCameraAspect();
     __imp__sub_827C6380(ctx, base);
 }
 
@@ -82,6 +106,10 @@ namespace wet::fnc
     // Every frame (VdSwap): follows changes of the fps option (F6, overlay).
     void FrameTick()
     {
+        // (Cameras made after a change of window size or option use it.)
+        static int frames = 0;
+        if (++frames % 60 == 0)
+            ApplyCameraAspect();
         static bool readback = false;
         bool want = s_recolouring.load() > 0 || os::MonotonicNs() - s_recolourEndNs.load() < 10000000000ull;
         if (s_recolourEndNs.load() == 0 && s_recolouring.load() == 0)

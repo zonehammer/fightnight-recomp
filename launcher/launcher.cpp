@@ -115,7 +115,7 @@ namespace
         kMouseAim, kSensitivity, kSensitivityValue, kInvertY, kVibration,
         kShaderCache, kVideoMode, kPopups, kSkipIntro, kAniso, kSaveBackups, kBrightness, kBrightnessValue, kContrast, kContrastValue, kGamma, kGammaValue, kSaturation, kSaturationValue, kAsyncShaders, kShaderPreload, kLanguage,
         kStatus, kPlay, kSaves, kClearShaders, kKeyboard,
-        kVsync, kCheckUpdates, kReportBug, kUpdateText, kPrompts,
+        kVsync, kCheckUpdates, kReportBug, kUpdateText, kWidescreen,
         kMonitor, kPadTest, kAchievements,
         kMenuOpenSaves = 500, kMenuBackup, kMenuImportZip, kMenuImportFolder, kMenuClearShaders, kMenuFreeSpace,
         kKeyFirst = 300,                       // one combo per keybinds action
@@ -514,6 +514,7 @@ namespace
         s_ini.Set("sharpness", Pos(kSharpness));
         s_ini.Set("antialiasing", Selected(kAntialiasing));
         s_ini.Set("vsync", Checked(kVsync));
+        s_ini.Set("widescreen", Checked(kWidescreen));
         s_ini.Set("mouse_aim", Checked(kMouseAim));
         s_ini.Set("mouse_sensitivity", Pos(kSensitivity));
         s_ini.Set("brightness", Pos(kBrightness));
@@ -1409,6 +1410,7 @@ namespace
         Slider(kSensitivity, kSensitivityValue, 136, 232, 150, 1, 200, ini.Get("mouse_sensitivity", 50), L"");
         Check(kVibration, L"Vibration", 22, 264, ini.Get("vibration", 1) != 0, 100);
         Make(L"BUTTON", L"Key / mouse...", BS_PUSHBUTTON | WS_TABSTOP, 216, 260, 110, 26, kKeyboard);
+        Check(kWidescreen, L"Ultrawide (fill 21:9 / 32:9 screens)", 22, 294, ini.Get("widescreen", 0) != 0, 300);
 
         // Other
         Group(L"Other", 350, 186, 330, 138);
