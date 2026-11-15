@@ -79,9 +79,12 @@ PPC_FUNC(sub_826BED10)
 
 namespace wet::fnc
 {
+    void CamTraceTick();   // fnc_camtrace.cpp (test build)
+
     // Every frame (VdSwap): follows changes of the fps option (F6, overlay).
     void FrameTick()
     {
+        CamTraceTick();
         static bool readback = false;
         bool want = s_recolouring.load() > 0 || os::MonotonicNs() - s_recolourEndNs.load() < 10000000000ull;
         if (s_recolourEndNs.load() == 0 && s_recolouring.load() == 0)
