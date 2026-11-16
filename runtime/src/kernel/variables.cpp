@@ -4,6 +4,7 @@
 #include "module.h"
 #include "os.h"
 
+#include <cstdlib>
 #include <thread>
 
 namespace wet
@@ -30,6 +31,8 @@ namespace wet
     void InitKernelVariables()
     {
         s_timebaseStartNs = os::MonotonicNs();
+        if (g_wetVmxUnfused)
+            Log("CPU: WET_VMX_UNFUSED - vector multiply-add with two roundings (as 0.1.1)");
 
         for (auto& imp : g_module.imports)
         {
@@ -102,6 +105,12 @@ namespace wet
         }
     }
 }
+
+// WET_VMX_UNFUSED=1: vmaddfp / vnmsubfp with two roundings (see wet_ppc_hooks.h).
+int g_wetVmxUnfused = [] {
+    const char* v = std::getenv("WET_VMX_UNFUSED");
+    return v && v[0] == '1' ? 1 : 0;
+}();
 
 // 50 MHz Xbox 360 timebase (mftb), see runtime/include/wet_ppc_hooks.h.
 uint64_t WetQueryTimebase()

@@ -1,5 +1,5 @@
 diff --git a/XenonRecomp/recompiler.cpp b/XenonRecomp/recompiler.cpp
-index fa91527..b0741fb 100644
+index fa91527..a4b70a9 100644
 --- a/XenonRecomp/recompiler.cpp
 +++ b/XenonRecomp/recompiler.cpp
 @@ -525,6 +525,128 @@ bool Recompiler::Recompile(
@@ -264,7 +264,7 @@ index fa91527..b0741fb 100644
          break;
  
      case PPC_INST_VCMPEQFP:
-@@ -1899,7 +2076,12 @@ bool Recompiler::Recompile(
+@@ -1899,7 +2076,14 @@ bool Recompiler::Recompile(
      case PPC_INST_VMADDFP:
      case PPC_INST_VMADDFP128:
          printSetFlushMode(true);
@@ -273,23 +273,26 @@ index fa91527..b0741fb 100644
 +        // floats is exact. A separate float multiply and add rounds twice and
 +        // can give exact zeros where the console keeps a tiny residual (0/0 NaNs
 +        // in animation blending; idea from FNC Reborn's rexglue patch).
-+        println("\t{{ simde__m256d fa = simde_mm256_cvtps_pd(simde_mm_load_ps({}.f32)), fb = simde_mm256_cvtps_pd(simde_mm_load_ps({}.f32)), fc = simde_mm256_cvtps_pd(simde_mm_load_ps({}.f32));", v(insn.operands[1]), v(insn.operands[2]), v(insn.operands[3]));
++        // WET_VMX_UNFUSED=1 (runtime, diagnostics): the two-rounding form instead.
++        println("\tif (g_wetVmxUnfused) [[unlikely]] simde_mm_store_ps({}.f32, simde_mm_add_ps(simde_mm_mul_ps(simde_mm_load_ps({}.f32), simde_mm_load_ps({}.f32)), simde_mm_load_ps({}.f32)));", v(insn.operands[0]), v(insn.operands[1]), v(insn.operands[2]), v(insn.operands[3]));
++        println("\telse {{ simde__m256d fa = simde_mm256_cvtps_pd(simde_mm_load_ps({}.f32)), fb = simde_mm256_cvtps_pd(simde_mm_load_ps({}.f32)), fc = simde_mm256_cvtps_pd(simde_mm_load_ps({}.f32));", v(insn.operands[1]), v(insn.operands[2]), v(insn.operands[3]));
 +        println("\t  simde_mm_store_ps({}.f32, simde_mm256_cvtpd_ps(simde_mm256_add_pd(simde_mm256_mul_pd(fa, fb), fc))); }}", v(insn.operands[0]));
          break;
  
      case PPC_INST_VMAXFP:
-@@ -1963,7 +2145,9 @@ bool Recompiler::Recompile(
+@@ -1963,7 +2147,10 @@ bool Recompiler::Recompile(
      case PPC_INST_VNMSUBFP:
      case PPC_INST_VNMSUBFP128:
          printSetFlushMode(true);
 -        println("\tsimde_mm_store_ps({}.f32, simde_mm_xor_ps(simde_mm_sub_ps(simde_mm_mul_ps(simde_mm_load_ps({}.f32), simde_mm_load_ps({}.f32)), simde_mm_load_ps({}.f32)), simde_mm_castsi128_ps(simde_mm_set1_epi32(int(0x80000000)))));", v(insn.operands[0]), v(insn.operands[1]), v(insn.operands[2]), v(insn.operands[3]));
 +        // -(a * b - c), fused as vmaddfp.
-+        println("\t{{ simde__m256d fa = simde_mm256_cvtps_pd(simde_mm_load_ps({}.f32)), fb = simde_mm256_cvtps_pd(simde_mm_load_ps({}.f32)), fc = simde_mm256_cvtps_pd(simde_mm_load_ps({}.f32));", v(insn.operands[1]), v(insn.operands[2]), v(insn.operands[3]));
++        println("\tif (g_wetVmxUnfused) [[unlikely]] simde_mm_store_ps({}.f32, simde_mm_xor_ps(simde_mm_sub_ps(simde_mm_mul_ps(simde_mm_load_ps({}.f32), simde_mm_load_ps({}.f32)), simde_mm_load_ps({}.f32)), simde_mm_castsi128_ps(simde_mm_set1_epi32(int(0x80000000)))));", v(insn.operands[0]), v(insn.operands[1]), v(insn.operands[2]), v(insn.operands[3]));
++        println("\telse {{ simde__m256d fa = simde_mm256_cvtps_pd(simde_mm_load_ps({}.f32)), fb = simde_mm256_cvtps_pd(simde_mm_load_ps({}.f32)), fc = simde_mm256_cvtps_pd(simde_mm_load_ps({}.f32));", v(insn.operands[1]), v(insn.operands[2]), v(insn.operands[3]));
 +        println("\t  simde_mm_store_ps({}.f32, simde_mm_xor_ps(simde_mm256_cvtpd_ps(simde_mm256_sub_pd(simde_mm256_mul_pd(fa, fb), fc)), simde_mm_castsi128_ps(simde_mm_set1_epi32(int(0x80000000))))); }}", v(insn.operands[0]));
          break;
  
      case PPC_INST_VOR:
-@@ -2014,6 +2198,40 @@ bool Recompiler::Recompile(
+@@ -2014,6 +2201,40 @@ bool Recompiler::Recompile(
              println("\t{}.u32[{}] = {}.u32;", v(insn.operands[0]), insn.operands[4], temp());
              break;
  
@@ -330,7 +333,7 @@ index fa91527..b0741fb 100644
          case 5: // float16_4
              if (insn.operands[3] != 2 || insn.operands[4] > 2)
                  fmt::println("Unexpected float16_4 pack instruction at {:X}", base);
-@@ -2088,6 +2306,7 @@ bool Recompiler::Recompile(
+@@ -2088,6 +2309,7 @@ bool Recompiler::Recompile(
          break;
  
      case PPC_INST_VSEL:
@@ -338,7 +341,7 @@ index fa91527..b0741fb 100644
          println("\tsimde_mm_store_si128((simde__m128i*){}.u8, simde_mm_or_si128(simde_mm_andnot_si128(simde_mm_load_si128((simde__m128i*){}.u8), simde_mm_load_si128((simde__m128i*){}.u8)), simde_mm_and_si128(simde_mm_load_si128((simde__m128i*){}.u8), simde_mm_load_si128((simde__m128i*){}.u8))));", v(insn.operands[0]), v(insn.operands[3]), v(insn.operands[1]), v(insn.operands[3]), v(insn.operands[2]));
          break;
  
-@@ -2102,6 +2321,14 @@ bool Recompiler::Recompile(
+@@ -2102,6 +2324,14 @@ bool Recompiler::Recompile(
          println("\tsimde_mm_store_si128((simde__m128i*){}.u8, simde_mm_alignr_epi8(simde_mm_load_si128((simde__m128i*){}.u8), simde_mm_load_si128((simde__m128i*){}.u8), {}));", v(insn.operands[0]), v(insn.operands[1]), v(insn.operands[2]), 16 - insn.operands[3]);
          break;
  
@@ -353,7 +356,7 @@ index fa91527..b0741fb 100644
      case PPC_INST_VSLW:
      case PPC_INST_VSLW128:
          // TODO: vectorize, ensure endianness is correct
-@@ -2178,6 +2405,74 @@ bool Recompiler::Recompile(
+@@ -2178,6 +2408,74 @@ bool Recompiler::Recompile(
          }
          break;
  
@@ -428,7 +431,7 @@ index fa91527..b0741fb 100644
      case PPC_INST_VSUBUBS:
          println("\tsimde_mm_store_si128((simde__m128i*){}.u8, simde_mm_subs_epu8(simde_mm_load_si128((simde__m128i*){}.u8), simde_mm_load_si128((simde__m128i*){}.u8)));", v(insn.operands[0]), v(insn.operands[1]), v(insn.operands[2]));
          break;
-@@ -2212,6 +2507,20 @@ bool Recompiler::Recompile(
+@@ -2212,6 +2510,20 @@ bool Recompiler::Recompile(
              println("\t{} = {};", v(insn.operands[0]), vTemp());
              break;
  
