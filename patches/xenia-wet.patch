@@ -4421,7 +4421,7 @@ index ffc8eef..92310c9 100644
    uint32_t primary_buffer_ptr_ = 0;
    uint32_t primary_buffer_size_ = 0;
 diff --git a/src/xenia/gpu/d3d12/d3d12_command_processor.cc b/src/xenia/gpu/d3d12/d3d12_command_processor.cc
-index 0ec70a7..8d832be 100644
+index 0ec70a7..1426970 100644
 --- a/src/xenia/gpu/d3d12/d3d12_command_processor.cc
 +++ b/src/xenia/gpu/d3d12/d3d12_command_processor.cc
 @@ -8,6 +8,9 @@
@@ -5098,7 +5098,7 @@ index 0ec70a7..8d832be 100644
    return true;
  }
  
-@@ -2500,10 +3016,50 @@ bool D3D12CommandProcessor::IssueCopy() {
+@@ -2500,10 +3016,67 @@ bool D3D12CommandProcessor::IssueCopy() {
      return false;
    }
    uint32_t written_address, written_length;
@@ -5109,6 +5109,23 @@ index 0ec70a7..8d832be 100644
 +                                     written_address, written_length,
 +                                     &wet_copy_dest_info, &wet_scaled)) {
 +    return false;
++  }
++  if (wet_draw_trace_frames > 0) {
++    // F9 trace: every resolve (render target -> texture memory), in order with
++    // the draws, to see which textures a frame writes before reading them.
++    const RegisterFile& wet_regs = *register_file_;
++    XELOGW(
++        "DRAWTRACE: resolve to {:08X} +{:X} | dest format {} | copy control "
++        "{:08X} (source {} depth {}) | surface {:08X} depth info {:08X} "
++        "colour info {:08X} | scaled {}",
++        written_address, written_length,
++        uint32_t(wet_copy_dest_info.copy_dest_format),
++        wet_regs.values[XE_GPU_REG_RB_COPY_CONTROL],
++        wet_regs.values[XE_GPU_REG_RB_COPY_CONTROL] & 7,
++        (wet_regs.values[XE_GPU_REG_RB_COPY_CONTROL] & 7) == 4 ? 1 : 0,
++        wet_regs.values[XE_GPU_REG_RB_SURFACE_INFO],
++        wet_regs.values[XE_GPU_REG_RB_DEPTH_INFO],
++        wet_regs.values[XE_GPU_REG_RB_COLOR_INFO], wet_scaled ? 1 : 0);
 +  }
 +  // Every resolve's recurrence is tracked (even with readback off), so the
 +  // scene's own render targets - resolved every frame - are known as such
@@ -5149,7 +5166,7 @@ index 0ec70a7..8d832be 100644
    if (cvars::d3d12_readback_resolve &&
        !texture_cache_->IsDrawResolutionScaled() && written_length) {
      // Read the resolved data on the CPU.
-@@ -2663,6 +3219,21 @@ bool D3D12CommandProcessor::BeginSubmission(bool is_guest_command) {
+@@ -2663,6 +3236,21 @@ bool D3D12CommandProcessor::BeginSubmission(bool is_guest_command) {
        }
        frame_completed_ = frame;
      }
@@ -5171,7 +5188,7 @@ index 0ec70a7..8d832be 100644
    }
  
    if (!submission_open_) {
-@@ -2672,6 +3243,12 @@ bool D3D12CommandProcessor::BeginSubmission(bool is_guest_command) {
+@@ -2672,6 +3260,12 @@ bool D3D12CommandProcessor::BeginSubmission(bool is_guest_command) {
      // end of the submission (when async pipeline creation requests are
      // fulfilled).
      deferred_command_list_.Reset();
@@ -5184,7 +5201,7 @@ index 0ec70a7..8d832be 100644
  
      // Reset cached state of the command list.
      ff_viewport_update_needed_ = true;
-@@ -2790,6 +3367,24 @@ bool D3D12CommandProcessor::EndSubmission(bool is_swap) {
+@@ -2790,6 +3384,24 @@ bool D3D12CommandProcessor::EndSubmission(bool is_swap) {
      // destroyed between frames.
      SubmitBarriers();
  
@@ -5209,7 +5226,7 @@ index 0ec70a7..8d832be 100644
      // TODO(Triang3l): Error checking.
  
      ID3D12CommandQueue* direct_queue = provider.GetDirectQueue();
-@@ -2840,6 +3435,25 @@ bool D3D12CommandProcessor::EndSubmission(bool is_swap) {
+@@ -2840,6 +3452,25 @@ bool D3D12CommandProcessor::EndSubmission(bool is_swap) {
        pix_capturing_ = false;
      }
      frame_open_ = false;
@@ -5235,7 +5252,7 @@ index 0ec70a7..8d832be 100644
      // Submission already closed now, so minus 1.
      closed_frame_submissions_[(frame_current_++) % kQueueFrames] =
          GetCurrentSubmission() - 1;
-@@ -2882,6 +3496,145 @@ bool D3D12CommandProcessor::EndSubmission(bool is_swap) {
+@@ -2882,6 +3513,145 @@ bool D3D12CommandProcessor::EndSubmission(bool is_swap) {
    return true;
  }
  
@@ -5381,7 +5398,7 @@ index 0ec70a7..8d832be 100644
  bool D3D12CommandProcessor::CanEndSubmissionImmediately() const {
    return !submission_open_ || !pipeline_cache_->IsCreatingPipelines();
  }
-@@ -4311,6 +5064,175 @@ bool D3D12CommandProcessor::UpdateBindings(const D3D12Shader* vertex_shader,
+@@ -4311,6 +5081,175 @@ bool D3D12CommandProcessor::UpdateBindings(const D3D12Shader* vertex_shader,
    return true;
  }
  
@@ -5557,7 +5574,7 @@ index 0ec70a7..8d832be 100644
  ID3D12Resource* D3D12CommandProcessor::RequestReadbackBuffer(uint32_t size) {
    if (size == 0) {
      return nullptr;
-@@ -4359,6 +5281,615 @@ void D3D12CommandProcessor::WriteGammaRampSRV(
+@@ -4359,6 +5298,615 @@ void D3D12CommandProcessor::WriteGammaRampSRV(
    device->CreateShaderResourceView(gamma_ramp_buffer_.Get(), &desc, handle);
  }
  
