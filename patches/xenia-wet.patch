@@ -3568,7 +3568,7 @@ index 8f6087b05..47c87eec0 100644
  
  static void set_name(HANDLE thread, const std::string_view name) {
 diff --git a/src/xenia/gpu/command_processor.cc b/src/xenia/gpu/command_processor.cc
-index ce08d19bd..6d95fbf1b 100644
+index ce08d19bd..8eb433a64 100644
 --- a/src/xenia/gpu/command_processor.cc
 +++ b/src/xenia/gpu/command_processor.cc
 @@ -9,6 +9,15 @@
@@ -3595,13 +3595,14 @@ index ce08d19bd..6d95fbf1b 100644
  #include "xenia/gpu/xenos.h"
  #include "xenia/kernel/kernel_state.h"
  #include "xenia/kernel/user_module.h"
-@@ -32,6 +42,313 @@
+@@ -32,6 +42,314 @@
  namespace xe {
  namespace gpu {
  
 +#if XE_WET_RUNTIME
 +void (*wet_gpu_progress)() = nullptr;
 +void (*wet_log_hook)(const char* text) = nullptr;
++int wet_real_occlusion = 0;
 +#endif
 +
 +#if XE_WET_RUNTIME
@@ -3909,7 +3910,7 @@ index ce08d19bd..6d95fbf1b 100644
  using namespace xe::gpu::xenos;
  
  CommandProcessor::CommandProcessor(GraphicsSystem* graphics_system,
-@@ -244,6 +561,7 @@ void CommandProcessor::WorkerThreadMain() {
+@@ -244,6 +562,7 @@ void CommandProcessor::WorkerThreadMain() {
        xe::store_and_swap<uint32_t>(
            memory_->TranslatePhysical(read_ptr_writeback_ptr_), read_ptr_index_);
      }
@@ -3917,7 +3918,7 @@ index ce08d19bd..6d95fbf1b 100644
  
      // FIXME: We're supposed to process the WAIT_UNTIL register at this point,
      // but no games seem to actually use it.
-@@ -349,6 +667,7 @@ void CommandProcessor::WriteRegister(uint32_t index, uint32_t value) {
+@@ -349,6 +668,7 @@ void CommandProcessor::WriteRegister(uint32_t index, uint32_t value) {
        uint32_t scratch_addr = regs.values[XE_GPU_REG_SCRATCH_ADDR];
        uint32_t mem_addr = scratch_addr + (scratch_reg * 4);
        xe::store_and_swap<uint32_t>(memory_->TranslatePhysical(mem_addr), value);
@@ -3925,7 +3926,7 @@ index ce08d19bd..6d95fbf1b 100644
      }
    } else {
      switch (index) {
-@@ -633,6 +952,26 @@ bool CommandProcessor::ExecutePacket(RingBuffer* reader) {
+@@ -633,6 +953,26 @@ bool CommandProcessor::ExecutePacket(RingBuffer* reader) {
    }
  }
  
@@ -3952,7 +3953,7 @@ index ce08d19bd..6d95fbf1b 100644
  bool CommandProcessor::ExecutePacketType0(RingBuffer* reader, uint32_t packet) {
    // Type-0 packet.
    // Write count registers in sequence to the registers starting at
-@@ -650,6 +989,13 @@ bool CommandProcessor::ExecutePacketType0(RingBuffer* reader, uint32_t packet) {
+@@ -650,6 +990,13 @@ bool CommandProcessor::ExecutePacketType0(RingBuffer* reader, uint32_t packet) {
  
    uint32_t base_index = (packet & 0x7FFF);
    uint32_t write_one_reg = (packet >> 15) & 0x1;
@@ -3966,7 +3967,7 @@ index ce08d19bd..6d95fbf1b 100644
    for (uint32_t m = 0; m < count; m++) {
      uint32_t reg_data = reader->ReadAndSwap<uint32_t>();
      uint32_t target_index = write_one_reg ? base_index : base_index + m;
-@@ -743,21 +1089,26 @@ bool CommandProcessor::ExecutePacketType3(RingBuffer* reader, uint32_t packet) {
+@@ -743,21 +1090,26 @@ bool CommandProcessor::ExecutePacketType3(RingBuffer* reader, uint32_t packet) {
        break;
      case PM4_MEM_WRITE:
        result = ExecutePacketType3_MEM_WRITE(reader, packet, count);
@@ -3993,7 +3994,7 @@ index ce08d19bd..6d95fbf1b 100644
        break;
      case PM4_DRAW_INDX:
        result = ExecutePacketType3_DRAW_INDX(reader, packet, count);
-@@ -932,11 +1283,46 @@ bool CommandProcessor::ExecutePacketType3_XE_SWAP(RingBuffer* reader,
+@@ -932,11 +1284,46 @@ bool CommandProcessor::ExecutePacketType3_XE_SWAP(RingBuffer* reader,
    uint32_t frontbuffer_ptr = reader->ReadAndSwap<uint32_t>();
    uint32_t frontbuffer_width = reader->ReadAndSwap<uint32_t>();
    uint32_t frontbuffer_height = reader->ReadAndSwap<uint32_t>();
@@ -4041,7 +4042,7 @@ index ce08d19bd..6d95fbf1b 100644
    return true;
  }
  
-@@ -974,7 +1360,24 @@ bool CommandProcessor::ExecutePacketType3_WAIT_REG_MEM(RingBuffer* reader,
+@@ -974,7 +1361,24 @@ bool CommandProcessor::ExecutePacketType3_WAIT_REG_MEM(RingBuffer* reader,
                  : register_file_->values[poll_reg_addr];
  
    bool matched = false;
@@ -4066,7 +4067,7 @@ index ce08d19bd..6d95fbf1b 100644
      uint32_t value = value_ref;
      if (is_memory) {
        trace_writer_.WriteMemoryRead(CpuToGpu(poll_reg_addr & ~uint32_t(0x3)),
-@@ -1013,16 +1416,31 @@ bool CommandProcessor::ExecutePacketType3_WAIT_REG_MEM(RingBuffer* reader,
+@@ -1013,16 +1417,31 @@ bool CommandProcessor::ExecutePacketType3_WAIT_REG_MEM(RingBuffer* reader,
          matched = true;
          break;
      }
@@ -4098,7 +4099,7 @@ index ce08d19bd..6d95fbf1b 100644
          xe::threading::SyncMemory();
          ReturnFromWait();
  
-@@ -1035,6 +1453,17 @@ bool CommandProcessor::ExecutePacketType3_WAIT_REG_MEM(RingBuffer* reader,
+@@ -1035,6 +1454,17 @@ bool CommandProcessor::ExecutePacketType3_WAIT_REG_MEM(RingBuffer* reader,
        }
      }
    } while (!matched);
@@ -4116,9 +4117,17 @@ index ce08d19bd..6d95fbf1b 100644
  
    return true;
  }
-@@ -1272,6 +1701,19 @@ bool CommandProcessor::ExecutePacketType3_EVENT_WRITE_ZPD(RingBuffer* reader,
+@@ -1271,7 +1701,27 @@ bool CommandProcessor::ExecutePacketType3_EVENT_WRITE_ZPD(RingBuffer* reader,
+     // Older versions of D3D also checks for ZFail (4D5307D5).
      bool is_end_via_z_fail = pSampleCounts->ZFail_A == kQueryFinished &&
                               pSampleCounts->ZFail_B == kQueryFinished;
++#if XE_WET_RUNTIME
++    if (wet_real_occlusion &&
++        WetOcclusionEvent(is_end_via_z_pass || is_end_via_z_fail,
++                          register_file_->values[XE_GPU_REG_RB_SAMPLE_COUNT_ADDR])) {
++      return true;
++    }
++#endif
      std::memset(pSampleCounts, 0, sizeof(xe_gpu_depth_sample_counts));
 +#if XE_WET_RUNTIME
 +    if (is_end_via_z_pass || is_end_via_z_fail) {
@@ -4136,7 +4145,7 @@ index ce08d19bd..6d95fbf1b 100644
      if (is_end_via_z_pass || is_end_via_z_fail) {
        pSampleCounts->ZPass_A = fake_sample_count;
        pSampleCounts->Total_A = fake_sample_count;
-@@ -1455,10 +1897,14 @@ bool CommandProcessor::ExecutePacketType3_SET_CONSTANT(RingBuffer* reader,
+@@ -1455,10 +1905,14 @@ bool CommandProcessor::ExecutePacketType3_SET_CONSTANT(RingBuffer* reader,
        reader->AdvanceRead((count - 1) * sizeof(uint32_t));
        return true;
    }
@@ -4151,7 +4160,7 @@ index ce08d19bd..6d95fbf1b 100644
    return true;
  }
  
-@@ -1467,10 +1913,14 @@ bool CommandProcessor::ExecutePacketType3_SET_CONSTANT2(RingBuffer* reader,
+@@ -1467,10 +1921,14 @@ bool CommandProcessor::ExecutePacketType3_SET_CONSTANT2(RingBuffer* reader,
                                                          uint32_t count) {
    uint32_t offset_type = reader->ReadAndSwap<uint32_t>();
    uint32_t index = offset_type & 0xFFFF;
@@ -4166,7 +4175,7 @@ index ce08d19bd..6d95fbf1b 100644
    return true;
  }
  
-@@ -1506,11 +1956,20 @@ bool CommandProcessor::ExecutePacketType3_LOAD_ALU_CONSTANT(RingBuffer* reader,
+@@ -1506,11 +1964,20 @@ bool CommandProcessor::ExecutePacketType3_LOAD_ALU_CONSTANT(RingBuffer* reader,
        return true;
    }
    trace_writer_.WriteMemoryRead(CpuToGpu(address), size_dwords * 4);
@@ -4187,7 +4196,7 @@ index ce08d19bd..6d95fbf1b 100644
    return true;
  }
  
-@@ -1518,10 +1977,14 @@ bool CommandProcessor::ExecutePacketType3_SET_SHADER_CONSTANTS(
+@@ -1518,10 +1985,14 @@ bool CommandProcessor::ExecutePacketType3_SET_SHADER_CONSTANTS(
      RingBuffer* reader, uint32_t packet, uint32_t count) {
    uint32_t offset_type = reader->ReadAndSwap<uint32_t>();
    uint32_t index = offset_type & 0xFFFF;
@@ -4203,7 +4212,7 @@ index ce08d19bd..6d95fbf1b 100644
  }
  
 diff --git a/src/xenia/gpu/command_processor.h b/src/xenia/gpu/command_processor.h
-index ffc8eeffa..54961f444 100644
+index ffc8eeffa..92310c9cd 100644
 --- a/src/xenia/gpu/command_processor.h
 +++ b/src/xenia/gpu/command_processor.h
 @@ -10,6 +10,7 @@
@@ -4214,7 +4223,7 @@ index ffc8eeffa..54961f444 100644
  #include <atomic>
  #include <cstring>
  #include <functional>
-@@ -35,9 +36,102 @@ class ByteStream;
+@@ -35,9 +36,104 @@ class ByteStream;
  
  namespace gpu {
  
@@ -4225,6 +4234,8 @@ index ffc8eeffa..54961f444 100644
 +extern void (*wet_gpu_progress)();
 +// WET: writes a line to the runtime's own log (with its timestamps), if set.
 +extern void (*wet_log_hook)(const char* text);
++// Real (host) occlusion queries instead of a fixed answer (D3D12).
++extern int wet_real_occlusion;
 +inline void WetGpuProgress() {
 +  if (wet_gpu_progress) {
 +    wet_gpu_progress();
@@ -4317,7 +4328,7 @@ index ffc8eeffa..54961f444 100644
  struct SwapState {
    // Lock must be held when changing data in this structure.
    std::mutex mutex;
-@@ -71,6 +165,10 @@ class CommandProcessor {
+@@ -71,6 +167,10 @@ class CommandProcessor {
      kNone,
      kFxaa,
      kFxaaExtreme,
@@ -4328,7 +4339,7 @@ index ffc8eeffa..54961f444 100644
    };
  
    CommandProcessor(GraphicsSystem* graphics_system,
-@@ -78,6 +176,10 @@ class CommandProcessor {
+@@ -78,6 +178,10 @@ class CommandProcessor {
    virtual ~CommandProcessor();
  
    uint32_t counter() const { return counter_; }
@@ -4339,7 +4350,7 @@ index ffc8eeffa..54961f444 100644
    void increment_counter() { counter_++; }
  
    Shader* active_vertex_shader() const { return active_vertex_shader_; }
-@@ -152,6 +254,17 @@ class CommandProcessor {
+@@ -152,6 +256,17 @@ class CommandProcessor {
    virtual void ShutdownContext() = 0;
  
    virtual void WriteRegister(uint32_t index, uint32_t value);
@@ -4357,7 +4368,19 @@ index ffc8eeffa..54961f444 100644
  
    const reg::DC_LUT_30_COLOR* gamma_ramp_256_entry_table() const {
      return gamma_ramp_256_entry_table_;
-@@ -270,6 +383,9 @@ class CommandProcessor {
+@@ -200,6 +315,11 @@ class CommandProcessor {
+                                           uint32_t count);
+   bool ExecutePacketType3_EVENT_WRITE_EXT(RingBuffer* reader, uint32_t packet,
+                                           uint32_t count);
++  // WET: a ZPD event (occlusion query begin, or end with its report at
++  // report_address); true if the backend handled it.
++  virtual bool WetOcclusionEvent(bool is_end, uint32_t report_address) {
++    return false;
++  }
+   bool ExecutePacketType3_EVENT_WRITE_ZPD(RingBuffer* reader, uint32_t packet,
+                                           uint32_t count);
+   bool ExecutePacketType3Draw(RingBuffer* reader, uint32_t packet,
+@@ -270,6 +390,9 @@ class CommandProcessor {
    std::vector<uint32_t> me_bin_;
  
    uint32_t counter_ = 0;
@@ -4368,7 +4391,7 @@ index ffc8eeffa..54961f444 100644
    uint32_t primary_buffer_ptr_ = 0;
    uint32_t primary_buffer_size_ = 0;
 diff --git a/src/xenia/gpu/d3d12/d3d12_command_processor.cc b/src/xenia/gpu/d3d12/d3d12_command_processor.cc
-index 0ec70a7d1..a96720bfd 100644
+index 0ec70a7d1..8d832be27 100644
 --- a/src/xenia/gpu/d3d12/d3d12_command_processor.cc
 +++ b/src/xenia/gpu/d3d12/d3d12_command_processor.cc
 @@ -8,6 +8,9 @@
@@ -4467,7 +4490,7 @@ index 0ec70a7d1..a96720bfd 100644
    // Create the command list and one allocator because it's needed for a command
    // list.
    ID3D12CommandAllocator* command_allocator;
-@@ -1502,6 +1566,12 @@ bool D3D12CommandProcessor::SetupContext() {
+@@ -1502,6 +1566,20 @@ bool D3D12CommandProcessor::SetupContext() {
  void D3D12CommandProcessor::ShutdownContext() {
    AwaitAllQueueOperationsCompletion();
  
@@ -4475,12 +4498,20 @@ index 0ec70a7d1..a96720bfd 100644
 +  ui::d3d12::util::ReleaseAndNull(wet_ts_heap_);
 +  ui::d3d12::util::ReleaseAndNull(wet_ts_readback_);
 +  wet_ts_frame_ = false;
++  if (wet_oq_readback_ && wet_oq_mapping_) {
++    wet_oq_readback_->Unmap(0, nullptr);
++  }
++  wet_oq_mapping_ = nullptr;
++  ui::d3d12::util::ReleaseAndNull(wet_oq_heap_);
++  ui::d3d12::util::ReleaseAndNull(wet_oq_readback_);
++  wet_oq_pending_.clear();
++  wet_oq_open_ = -1;
 +#endif
 +
    ui::d3d12::util::ReleaseAndNull(readback_buffer_);
    readback_buffer_size_ = 0;
  
-@@ -1516,6 +1586,9 @@ void D3D12CommandProcessor::ShutdownContext() {
+@@ -1516,6 +1594,9 @@ void D3D12CommandProcessor::ShutdownContext() {
  
    fxaa_source_texture_submission_ = 0;
    fxaa_source_texture_.Reset();
@@ -4490,7 +4521,7 @@ index 0ec70a7d1..a96720bfd 100644
  
    fxaa_extreme_pipeline_.Reset();
    fxaa_pipeline_.Reset();
-@@ -1525,6 +1598,12 @@ void D3D12CommandProcessor::ShutdownContext() {
+@@ -1525,6 +1606,12 @@ void D3D12CommandProcessor::ShutdownContext() {
    apply_gamma_pwl_pipeline_.Reset();
    apply_gamma_table_fxaa_luma_pipeline_.Reset();
    apply_gamma_table_pipeline_.Reset();
@@ -4503,7 +4534,7 @@ index 0ec70a7d1..a96720bfd 100644
    apply_gamma_root_signature_.Reset();
  
    // Unmapping will be done implicitly by the destruction.
-@@ -1625,6 +1704,64 @@ void D3D12CommandProcessor::WriteRegister(uint32_t index, uint32_t value) {
+@@ -1625,6 +1712,64 @@ void D3D12CommandProcessor::WriteRegister(uint32_t index, uint32_t value) {
    }
  }
  
@@ -4568,7 +4599,7 @@ index 0ec70a7d1..a96720bfd 100644
  void D3D12CommandProcessor::OnGammaRamp256EntryTableValueWritten() {
    gamma_ramp_256_entry_table_up_to_date_ = false;
  }
-@@ -1636,6 +1773,9 @@ void D3D12CommandProcessor::OnGammaRampPWLValueWritten() {
+@@ -1636,6 +1781,9 @@ void D3D12CommandProcessor::OnGammaRampPWLValueWritten() {
  void D3D12CommandProcessor::IssueSwap(uint32_t frontbuffer_ptr,
                                        uint32_t frontbuffer_width,
                                        uint32_t frontbuffer_height) {
@@ -4578,7 +4609,7 @@ index 0ec70a7d1..a96720bfd 100644
    SCOPE_profile_cpu_f("gpu");
  
    ui::Presenter* presenter = graphics_system_->presenter();
-@@ -1648,6 +1788,12 @@ void D3D12CommandProcessor::IssueSwap(uint32_t frontbuffer_ptr,
+@@ -1648,6 +1796,12 @@ void D3D12CommandProcessor::IssueSwap(uint32_t frontbuffer_ptr,
      return;
    }
  
@@ -4591,7 +4622,7 @@ index 0ec70a7d1..a96720bfd 100644
    // Obtain the actual front buffer size to pass to RefreshGuestOutput,
    // resolution-scaled if it's a resolve destination, or not otherwise.
    D3D12_SHADER_RESOURCE_VIEW_DESC swap_texture_srv_desc;
-@@ -1657,11 +1803,21 @@ void D3D12CommandProcessor::IssueSwap(uint32_t frontbuffer_ptr,
+@@ -1657,11 +1811,21 @@ void D3D12CommandProcessor::IssueSwap(uint32_t frontbuffer_ptr,
    if (!swap_texture_resource) {
      return;
    }
@@ -4613,7 +4644,7 @@ index 0ec70a7d1..a96720bfd 100644
        [this, &swap_texture_srv_desc, frontbuffer_format, swap_texture_resource,
         &swap_texture_desc](
            ui::Presenter::GuestOutputRefreshContext& context) -> bool {
-@@ -1671,6 +1827,14 @@ void D3D12CommandProcessor::IssueSwap(uint32_t frontbuffer_ptr,
+@@ -1671,6 +1835,14 @@ void D3D12CommandProcessor::IssueSwap(uint32_t frontbuffer_ptr,
          SwapPostEffect swap_post_effect = GetActualSwapPostEffect();
          bool use_fxaa = swap_post_effect == SwapPostEffect::kFxaa ||
                          swap_post_effect == SwapPostEffect::kFxaaExtreme;
@@ -4628,7 +4659,7 @@ index 0ec70a7d1..a96720bfd 100644
          if (use_fxaa) {
            // Make sure the texture of the correct size is available for FXAA.
            if (fxaa_source_texture_) {
-@@ -1850,6 +2014,17 @@ void D3D12CommandProcessor::IssueSwap(uint32_t frontbuffer_ptr,
+@@ -1850,6 +2022,17 @@ void D3D12CommandProcessor::IssueSwap(uint32_t frontbuffer_ptr,
          ApplyGammaConstants apply_gamma_constants;
          apply_gamma_constants.size[0] = uint32_t(swap_texture_desc.Width);
          apply_gamma_constants.size[1] = uint32_t(swap_texture_desc.Height);
@@ -4646,7 +4677,7 @@ index 0ec70a7d1..a96720bfd 100644
          deferred_command_list_.D3DSetComputeRoot32BitConstants(
              UINT(ApplyGammaRootParameter::kConstants),
              sizeof(apply_gamma_constants) / sizeof(uint32_t),
-@@ -1873,6 +2048,14 @@ void D3D12CommandProcessor::IssueSwap(uint32_t frontbuffer_ptr,
+@@ -1873,6 +2056,14 @@ void D3D12CommandProcessor::IssueSwap(uint32_t frontbuffer_ptr,
                use_fxaa ? apply_gamma_table_fxaa_luma_pipeline_.Get()
                         : apply_gamma_table_pipeline_.Get();
          }
@@ -4661,7 +4692,7 @@ index 0ec70a7d1..a96720bfd 100644
          SetExternalPipeline(apply_gamma_pipeline);
          SubmitBarriers();
          uint32_t group_count_x = (uint32_t(swap_texture_desc.Width) + 15) / 16;
-@@ -1916,6 +2099,20 @@ void D3D12CommandProcessor::IssueSwap(uint32_t frontbuffer_ptr,
+@@ -1916,6 +2107,20 @@ void D3D12CommandProcessor::IssueSwap(uint32_t frontbuffer_ptr,
                  D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
              // From now on, even in case of failure, guest_output_resource must
              // be transitioned back to kGuestOutputInternalState!
@@ -4682,7 +4713,7 @@ index 0ec70a7d1..a96720bfd 100644
              deferred_command_list_.D3DSetComputeRootSignature(
                  fxaa_root_signature_.Get());
              FxaaConstants fxaa_constants;
-@@ -1996,6 +2193,178 @@ Shader* D3D12CommandProcessor::LoadShader(xenos::ShaderType shader_type,
+@@ -1996,6 +2201,178 @@ Shader* D3D12CommandProcessor::LoadShader(xenos::ShaderType shader_type,
    return pipeline_cache_->LoadShader(shader_type, host_address, dword_count);
  }
  
@@ -4861,7 +4892,7 @@ index 0ec70a7d1..a96720bfd 100644
  bool D3D12CommandProcessor::IssueDraw(xenos::PrimitiveType primitive_type,
                                        uint32_t index_count,
                                        IndexBufferInfo* index_buffer_info,
-@@ -2052,6 +2421,10 @@ bool D3D12CommandProcessor::IssueDraw(xenos::PrimitiveType primitive_type,
+@@ -2052,6 +2429,10 @@ bool D3D12CommandProcessor::IssueDraw(xenos::PrimitiveType primitive_type,
      // cache.
      if (!memexport_used_vertex) {
        // This draw has no effect.
@@ -4872,7 +4903,7 @@ index 0ec70a7d1..a96720bfd 100644
        return true;
      }
    }
-@@ -2070,8 +2443,96 @@ bool D3D12CommandProcessor::IssueDraw(xenos::PrimitiveType primitive_type,
+@@ -2070,8 +2451,96 @@ bool D3D12CommandProcessor::IssueDraw(xenos::PrimitiveType primitive_type,
    }
    if (!primitive_processing_result.host_draw_vertex_count) {
      // Nothing to draw.
@@ -4969,7 +5000,7 @@ index 0ec70a7d1..a96720bfd 100644
  
    reg::RB_DEPTHCONTROL normalized_depth_control =
        draw_util::GetNormalizedDepthControl(regs);
-@@ -2104,6 +2565,41 @@ bool D3D12CommandProcessor::IssueDraw(xenos::PrimitiveType primitive_type,
+@@ -2104,6 +2573,41 @@ bool D3D12CommandProcessor::IssueDraw(xenos::PrimitiveType primitive_type,
                                      normalized_color_mask, *vertex_shader)) {
      return false;
    }
@@ -5011,7 +5042,7 @@ index 0ec70a7d1..a96720bfd 100644
  
    // Create the pipeline (for this, need the actually used render target formats
    // from the render target cache), translating the shaders - doing this now to
-@@ -2169,6 +2665,13 @@ bool D3D12CommandProcessor::IssueDraw(xenos::PrimitiveType primitive_type,
+@@ -2169,6 +2673,13 @@ bool D3D12CommandProcessor::IssueDraw(xenos::PrimitiveType primitive_type,
            render_target_cache_->depth_float24_convert_in_pixel_shader(),
        host_render_targets_used, pixel_shader && pixel_shader->writes_depth(),
        viewport_info);
@@ -5025,7 +5056,7 @@ index 0ec70a7d1..a96720bfd 100644
    draw_util::Scissor scissor;
    draw_util::GetScissor(regs, scissor);
    scissor.offset[0] *= draw_resolution_scale_x;
-@@ -2467,6 +2970,11 @@ bool D3D12CommandProcessor::IssueDraw(xenos::PrimitiveType primitive_type,
+@@ -2467,6 +2978,11 @@ bool D3D12CommandProcessor::IssueDraw(xenos::PrimitiveType primitive_type,
      }
    }
  
@@ -5037,7 +5068,7 @@ index 0ec70a7d1..a96720bfd 100644
    return true;
  }
  
-@@ -2500,10 +3008,50 @@ bool D3D12CommandProcessor::IssueCopy() {
+@@ -2500,10 +3016,50 @@ bool D3D12CommandProcessor::IssueCopy() {
      return false;
    }
    uint32_t written_address, written_length;
@@ -5088,7 +5119,7 @@ index 0ec70a7d1..a96720bfd 100644
    if (cvars::d3d12_readback_resolve &&
        !texture_cache_->IsDrawResolutionScaled() && written_length) {
      // Read the resolved data on the CPU.
-@@ -2663,6 +3211,21 @@ bool D3D12CommandProcessor::BeginSubmission(bool is_guest_command) {
+@@ -2663,6 +3219,21 @@ bool D3D12CommandProcessor::BeginSubmission(bool is_guest_command) {
        }
        frame_completed_ = frame;
      }
@@ -5110,7 +5141,7 @@ index 0ec70a7d1..a96720bfd 100644
    }
  
    if (!submission_open_) {
-@@ -2672,6 +3235,12 @@ bool D3D12CommandProcessor::BeginSubmission(bool is_guest_command) {
+@@ -2672,6 +3243,12 @@ bool D3D12CommandProcessor::BeginSubmission(bool is_guest_command) {
      // end of the submission (when async pipeline creation requests are
      // fulfilled).
      deferred_command_list_.Reset();
@@ -5123,11 +5154,12 @@ index 0ec70a7d1..a96720bfd 100644
  
      // Reset cached state of the command list.
      ff_viewport_update_needed_ = true;
-@@ -2790,6 +3359,23 @@ bool D3D12CommandProcessor::EndSubmission(bool is_swap) {
+@@ -2790,6 +3367,24 @@ bool D3D12CommandProcessor::EndSubmission(bool is_swap) {
      // destroyed between frames.
      SubmitBarriers();
  
 +#if XE_WET_RUNTIME
++    WetOcclusionCloseOpen();
 +    if (wet_ts_frame_) {
 +      // End of this submission's GPU work; until the next one starts the GPU
 +      // is idle or presenting.
@@ -5147,7 +5179,7 @@ index 0ec70a7d1..a96720bfd 100644
      // TODO(Triang3l): Error checking.
  
      ID3D12CommandQueue* direct_queue = provider.GetDirectQueue();
-@@ -2840,6 +3426,25 @@ bool D3D12CommandProcessor::EndSubmission(bool is_swap) {
+@@ -2840,6 +3435,25 @@ bool D3D12CommandProcessor::EndSubmission(bool is_swap) {
        pix_capturing_ = false;
      }
      frame_open_ = false;
@@ -5173,7 +5205,7 @@ index 0ec70a7d1..a96720bfd 100644
      // Submission already closed now, so minus 1.
      closed_frame_submissions_[(frame_current_++) % kQueueFrames] =
          GetCurrentSubmission() - 1;
-@@ -2882,6 +3487,145 @@ bool D3D12CommandProcessor::EndSubmission(bool is_swap) {
+@@ -2882,6 +3496,145 @@ bool D3D12CommandProcessor::EndSubmission(bool is_swap) {
    return true;
  }
  
@@ -5319,7 +5351,7 @@ index 0ec70a7d1..a96720bfd 100644
  bool D3D12CommandProcessor::CanEndSubmissionImmediately() const {
    return !submission_open_ || !pipeline_cache_->IsCreatingPipelines();
  }
-@@ -4311,6 +5055,175 @@ bool D3D12CommandProcessor::UpdateBindings(const D3D12Shader* vertex_shader,
+@@ -4311,6 +5064,175 @@ bool D3D12CommandProcessor::UpdateBindings(const D3D12Shader* vertex_shader,
    return true;
  }
  
@@ -5495,7 +5527,7 @@ index 0ec70a7d1..a96720bfd 100644
  ID3D12Resource* D3D12CommandProcessor::RequestReadbackBuffer(uint32_t size) {
    if (size == 0) {
      return nullptr;
-@@ -4359,6 +5272,491 @@ void D3D12CommandProcessor::WriteGammaRampSRV(
+@@ -4359,6 +5281,615 @@ void D3D12CommandProcessor::WriteGammaRampSRV(
    device->CreateShaderResourceView(gamma_ramp_buffer_.Get(), &desc, handle);
  }
  
@@ -5984,11 +6016,135 @@ index 0ec70a7d1..a96720bfd 100644
 +}
 +#endif  // XE_WET_RUNTIME
 +
++}  // namespace d3d12
++}  // namespace gpu
++}  // namespace xe
++
++#if XE_WET_RUNTIME
++namespace xe {
++namespace gpu {
++namespace d3d12 {
++
++void D3D12CommandProcessor::WetOcclusionCloseOpen() {
++  // A query can't stay open across command lists: one begun in this
++  // submission and not ended yet is ended here, and its count dropped.
++  if (wet_oq_open_ >= 0 && wet_oq_heap_) {
++    deferred_command_list_.D3DEndOcclusion(wet_oq_heap_, UINT(wet_oq_open_));
++  }
++  wet_oq_open_ = -1;
++}
++
++void D3D12CommandProcessor::WetOcclusionPump() {
++  uint64_t completed = GetCompletedSubmission();
++  uint32_t scale = render_target_cache_->draw_resolution_scale_x() *
++                   render_target_cache_->draw_resolution_scale_y();
++  while (!wet_oq_pending_.empty() &&
++         wet_oq_pending_.front().submission <= completed) {
++    const WetOqPending& p = wet_oq_pending_.front();
++    uint64_t samples = wet_oq_mapping_[p.slot];
++    if (scale > 1 && samples) {
++      samples = std::max<uint64_t>(1, (samples + scale / 2) / scale);
++    }
++    wet_oq_last_[p.address] = uint32_t(std::min<uint64_t>(samples, 0x7FFFFFFF));
++    wet_oq_pending_.pop_front();
++  }
++}
++
++bool D3D12CommandProcessor::WetOcclusionEvent(bool is_end,
++                                              uint32_t report_address) {
++  if (wet_oq_failed_ ||
++      render_target_cache_->GetPath() !=
++          RenderTargetCache::Path::kHostRenderTargets) {
++    return false;
++  }
++  if (!wet_oq_heap_) {
++    ID3D12Device* device = GetD3D12Provider().GetDevice();
++    D3D12_QUERY_HEAP_DESC heap_desc = {};
++    heap_desc.Type = D3D12_QUERY_HEAP_TYPE_OCCLUSION;
++    heap_desc.Count = kWetOqCount;
++    D3D12_RESOURCE_DESC buffer_desc;
++    ui::d3d12::util::FillBufferResourceDesc(
++        buffer_desc, UINT64(kWetOqCount) * 8, D3D12_RESOURCE_FLAG_NONE);
++    void* mapping = nullptr;
++    D3D12_RANGE read_range = {0, SIZE_T(kWetOqCount) * 8};
++    if (FAILED(device->CreateQueryHeap(&heap_desc,
++                                       IID_PPV_ARGS(&wet_oq_heap_))) ||
++        FAILED(device->CreateCommittedResource(
++            &ui::d3d12::util::kHeapPropertiesReadback, D3D12_HEAP_FLAG_NONE,
++            &buffer_desc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
++            IID_PPV_ARGS(&wet_oq_readback_))) ||
++        FAILED(wet_oq_readback_->Map(0, &read_range, &mapping))) {
++      ui::d3d12::util::ReleaseAndNull(wet_oq_heap_);
++      ui::d3d12::util::ReleaseAndNull(wet_oq_readback_);
++      wet_oq_failed_ = true;
++      XELOGW("WET: host occlusion queries unavailable");
++      return false;
++    }
++    wet_oq_mapping_ = static_cast<const uint64_t*>(mapping);
++    if (wet_log_hook) {
++      wet_log_hook("GPU: occlusion queries measured on the host GPU");
++    }
++  }
++  if (!BeginSubmission(true)) {
++    return false;
++  }
++  WetOcclusionPump();
++  if (!is_end) {
++    if (wet_oq_open_ >= 0) {
++      // Begun twice: the first one is dropped.
++      deferred_command_list_.D3DEndOcclusion(wet_oq_heap_, UINT(wet_oq_open_));
++    }
++    uint32_t slot = wet_oq_next_;
++    wet_oq_next_ = (wet_oq_next_ + 1) % kWetOqCount;
++    deferred_command_list_.D3DBeginOcclusion(wet_oq_heap_, slot);
++    wet_oq_open_ = slot;
++    wet_oq_open_submission_ = GetCurrentSubmission();
++    return true;
++  }
++  // End: measure (if this query was begun in this command list), then answer
++  // with the last count measured for this report.
++  if (wet_oq_open_ >= 0 && wet_oq_open_submission_ == GetCurrentSubmission()) {
++    uint32_t slot = uint32_t(wet_oq_open_);
++    deferred_command_list_.D3DEndOcclusion(wet_oq_heap_, slot);
++    deferred_command_list_.D3DResolveOcclusion(wet_oq_heap_, slot, 1,
++                                               wet_oq_readback_,
++                                               UINT64(slot) * 8);
++    if (wet_oq_pending_.size() < kWetOqCount / 2) {
++      wet_oq_pending_.push_back({slot, report_address, GetCurrentSubmission()});
++    }
++  }
++  wet_oq_open_ = -1;
++  uint32_t count = 1000;   // never measured yet: Xenia's usual answer
++  auto it = wet_oq_last_.find(report_address);
++  if (it != wet_oq_last_.end()) {
++    count = it->second;
++  }
++  auto* counts =
++      memory_->TranslatePhysical<xenos::xe_gpu_depth_sample_counts*>(report_address);
++  std::memset(counts, 0, sizeof(xenos::xe_gpu_depth_sample_counts));
++  // Each count is split across the A and B lanes (the guest adds them).
++  counts->Total_A = count - (count >> 1);
++  counts->Total_B = count >> 1;
++  counts->ZPass_A = count - (count >> 1);
++  counts->ZPass_B = count >> 1;
++  static uint32_t answered = 0;
++  uint32_t n = ++answered;
++  if (wet_log_hook && (n & (n - 1)) == 0 && n >= 64) {
++    char text[120];
++    std::snprintf(text, sizeof(text),
++                  "GPU: occlusion query #%u (report %08X): %u samples", n,
++                  report_address, count);
++    wet_log_hook(text);
++  }
++  return true;
++}
++
  }  // namespace d3d12
  }  // namespace gpu
  }  // namespace xe
++#endif
 diff --git a/src/xenia/gpu/d3d12/d3d12_command_processor.h b/src/xenia/gpu/d3d12/d3d12_command_processor.h
-index 88bdcb438..fbdc005a7 100644
+index 88bdcb438..06d56d3c6 100644
 --- a/src/xenia/gpu/d3d12/d3d12_command_processor.h
 +++ b/src/xenia/gpu/d3d12/d3d12_command_processor.h
 @@ -74,6 +74,47 @@ class D3D12CommandProcessor : public CommandProcessor {
@@ -6050,11 +6206,33 @@ index 88bdcb438..fbdc005a7 100644
  
    void OnGammaRamp256EntryTableValueWritten() override;
    void OnGammaRampPWLValueWritten() override;
-@@ -400,6 +445,42 @@ class D3D12CommandProcessor : public CommandProcessor {
+@@ -400,6 +445,64 @@ class D3D12CommandProcessor : public CommandProcessor {
    // Submission indices of frames that have already been submitted.
    uint64_t closed_frame_submissions_[kQueueFrames] = {};
  
 +#if XE_WET_RUNTIME
++  // Occlusion queries measured on the host GPU. The report is written at once
++  // with the last measured count for the same report address (games keep one
++  // address per query), the new measurement landing a frame or two later - so
++  // the guest never waits on the host GPU.
++  bool WetOcclusionEvent(bool is_end, uint32_t report_address) override;
++  void WetOcclusionPump();
++  void WetOcclusionCloseOpen();
++  static constexpr uint32_t kWetOqCount = 4096;
++  ID3D12QueryHeap* wet_oq_heap_ = nullptr;
++  ID3D12Resource* wet_oq_readback_ = nullptr;
++  const uint64_t* wet_oq_mapping_ = nullptr;
++  bool wet_oq_failed_ = false;
++  uint32_t wet_oq_next_ = 0;
++  int64_t wet_oq_open_ = -1;            // slot of the query begun, not ended
++  uint64_t wet_oq_open_submission_ = 0;
++  struct WetOqPending {
++    uint32_t slot;
++    uint32_t address;
++    uint64_t submission;
++  };
++  std::deque<WetOqPending> wet_oq_pending_;
++  std::unordered_map<uint32_t, uint32_t> wet_oq_last_;   // address -> count
 +  static constexpr uint32_t kWetTsPerFrame = 4096;
 +  ID3D12QueryHeap* wet_ts_heap_ = nullptr;
 +  ID3D12Resource* wet_ts_readback_ = nullptr;
@@ -6093,7 +6271,7 @@ index 88bdcb438..fbdc005a7 100644
    struct CommandAllocator {
      ID3D12CommandAllocator* command_allocator;
      uint64_t last_usage_submission;
-@@ -506,6 +587,10 @@ class D3D12CommandProcessor : public CommandProcessor {
+@@ -506,6 +609,10 @@ class D3D12CommandProcessor : public CommandProcessor {
  
    struct ApplyGammaConstants {
      uint32_t size[2];
@@ -6104,7 +6282,7 @@ index 88bdcb438..fbdc005a7 100644
    };
    enum class ApplyGammaRootParameter : UINT {
      kConstants,
-@@ -516,6 +601,31 @@ class D3D12CommandProcessor : public CommandProcessor {
+@@ -516,6 +623,31 @@ class D3D12CommandProcessor : public CommandProcessor {
      kCount,
    };
    Microsoft::WRL::ComPtr<ID3D12RootSignature> apply_gamma_root_signature_;
@@ -6136,7 +6314,7 @@ index 88bdcb438..fbdc005a7 100644
    Microsoft::WRL::ComPtr<ID3D12PipelineState> apply_gamma_table_pipeline_;
    Microsoft::WRL::ComPtr<ID3D12PipelineState>
        apply_gamma_table_fxaa_luma_pipeline_;
-@@ -554,6 +664,61 @@ class D3D12CommandProcessor : public CommandProcessor {
+@@ -554,6 +686,61 @@ class D3D12CommandProcessor : public CommandProcessor {
    Microsoft::WRL::ComPtr<ID3D12Resource> fxaa_source_texture_;
    uint64_t fxaa_source_texture_submission_ = 0;
  
@@ -6631,7 +6809,7 @@ index 0f9ffa650..f29c11e79 100644
   protected:
    bool IsSignedVersionSeparateForFormat(TextureKey key) const override;
 diff --git a/src/xenia/gpu/d3d12/deferred_command_list.cc b/src/xenia/gpu/d3d12/deferred_command_list.cc
-index adaefcd4c..1d48aa7f4 100644
+index adaefcd4c..8b4e7c6eb 100644
 --- a/src/xenia/gpu/d3d12/deferred_command_list.cc
 +++ b/src/xenia/gpu/d3d12/deferred_command_list.cc
 @@ -8,6 +8,7 @@
@@ -6666,10 +6844,29 @@ index adaefcd4c..1d48aa7f4 100644
        } break;
        case Command::kD3DIASetIndexBuffer: {
          auto view = reinterpret_cast<const D3D12_INDEX_BUFFER_VIEW*>(stream);
-@@ -267,6 +278,19 @@ void DeferredCommandList::Execute(ID3D12GraphicsCommandList* command_list,
+@@ -267,6 +278,38 @@ void DeferredCommandList::Execute(ID3D12GraphicsCommandList* command_list,
            command_list->SetPipelineState(current_pipeline_state);
          }
        } break;
++      case Command::kD3DBeginOcclusion: {
++        auto& args =
++            *reinterpret_cast<const D3DEndTimestampArguments*>(stream);
++        command_list->BeginQuery(args.heap, D3D12_QUERY_TYPE_OCCLUSION,
++                                 args.index);
++      } break;
++      case Command::kD3DEndOcclusion: {
++        auto& args =
++            *reinterpret_cast<const D3DEndTimestampArguments*>(stream);
++        command_list->EndQuery(args.heap, D3D12_QUERY_TYPE_OCCLUSION,
++                               args.index);
++      } break;
++      case Command::kD3DResolveOcclusion: {
++        auto& args =
++            *reinterpret_cast<const D3DResolveTimestampsArguments*>(stream);
++        command_list->ResolveQueryData(args.heap, D3D12_QUERY_TYPE_OCCLUSION,
++                                       args.start, args.count, args.dest,
++                                       args.dest_offset);
++      } break;
 +      case Command::kD3DEndTimestamp: {
 +        auto& args =
 +            *reinterpret_cast<const D3DEndTimestampArguments*>(stream);
@@ -6687,10 +6884,10 @@ index adaefcd4c..1d48aa7f4 100644
          if (command_list_1 != nullptr) {
            auto& args =
 diff --git a/src/xenia/gpu/d3d12/deferred_command_list.h b/src/xenia/gpu/d3d12/deferred_command_list.h
-index 1f68826d5..f227c7813 100644
+index 1f68826d5..cbdcd1d0a 100644
 --- a/src/xenia/gpu/d3d12/deferred_command_list.h
 +++ b/src/xenia/gpu/d3d12/deferred_command_list.h
-@@ -436,8 +436,29 @@ class DeferredCommandList {
+@@ -436,8 +436,56 @@ class DeferredCommandList {
                      sizeof(D3D12_SAMPLE_POSITION));
    }
  
@@ -6700,6 +6897,30 @@ index 1f68826d5..f227c7813 100644
 +        Command::kD3DEndTimestamp, sizeof(D3DEndTimestampArguments)));
 +    args.heap = heap;
 +    args.index = index;
++  }
++  // WET: occlusion queries.
++  void D3DBeginOcclusion(ID3D12QueryHeap* heap, UINT index) {
++    auto& args = *reinterpret_cast<D3DEndTimestampArguments*>(WriteCommand(
++        Command::kD3DBeginOcclusion, sizeof(D3DEndTimestampArguments)));
++    args.heap = heap;
++    args.index = index;
++  }
++  void D3DEndOcclusion(ID3D12QueryHeap* heap, UINT index) {
++    auto& args = *reinterpret_cast<D3DEndTimestampArguments*>(WriteCommand(
++        Command::kD3DEndOcclusion, sizeof(D3DEndTimestampArguments)));
++    args.heap = heap;
++    args.index = index;
++  }
++  void D3DResolveOcclusion(ID3D12QueryHeap* heap, UINT start, UINT count,
++                           ID3D12Resource* dest, UINT64 dest_offset) {
++    auto& args = *reinterpret_cast<D3DResolveTimestampsArguments*>(
++        WriteCommand(Command::kD3DResolveOcclusion,
++                     sizeof(D3DResolveTimestampsArguments)));
++    args.heap = heap;
++    args.start = start;
++    args.count = count;
++    args.dest = dest;
++    args.dest_offset = dest_offset;
 +  }
 +  void D3DResolveTimestamps(ID3D12QueryHeap* heap, UINT start, UINT count,
 +                            ID3D12Resource* dest, UINT64 dest_offset) {
@@ -6715,12 +6936,15 @@ index 1f68826d5..f227c7813 100644
 +
   private:
    enum class Command {
++    kD3DBeginOcclusion,
++    kD3DEndOcclusion,
++    kD3DResolveOcclusion,
 +    kD3DEndTimestamp,
 +    kD3DResolveTimestamps,
      kD3DClearDepthStencilView,
      kD3DClearRenderTargetView,
      kD3DClearUnorderedAccessViewUint,
-@@ -597,6 +618,19 @@ class DeferredCommandList {
+@@ -597,6 +645,19 @@ class DeferredCommandList {
      D3D12_SAMPLE_POSITION sample_positions[16];
    };
  

@@ -1785,6 +1785,13 @@ namespace wet::renderer
         // WET_OCCLUSION_SAMPLES=<n> sets it (diagnostics: the Fight Night camera).
         if (const char* v = std::getenv("WET_OCCLUSION_SAMPLES"))
             cvars::query_occlusion_fake_sample_count = std::atoi(v);
+        // Fight Night's camera decides where to go from occlusion queries (how
+        // much of each fighter it can see): with a fixed answer it swung out to
+        // the crowd near the ropes. They're measured on the host GPU instead
+        // (D3D12; WET_REAL_OCCLUSION=0/1 overrides).
+        xe::gpu::wet_real_occlusion = GAME_FNC;
+        if (const char* v = std::getenv("WET_REAL_OCCLUSION"))
+            xe::gpu::wet_real_occlusion = std::atoi(v);
         // Skipping render target copies back to an unchanged target: right for
         // WET, but in Conan, with resolution scaling, it now and then shows a
         // stale (black) frame - about once a second.
