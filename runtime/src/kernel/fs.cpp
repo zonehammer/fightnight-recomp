@@ -208,6 +208,18 @@ namespace
         }
     }
 
+    // cache:\... (the game's replay cache in game\hdd\cache).
+    static bool IsCachePath(const std::string& p)
+    {
+        static const char kPrefix[] = "cache:";
+        if (p.size() < 6)
+            return false;
+        for (int i = 0; i < 6; i++)
+            if (std::tolower((unsigned char)p[i]) != kPrefix[i])
+                return false;
+        return true;
+    }
+
     struct KFile : KObject
     {
         KFile() : KObject(ObjType::File) {}
@@ -215,6 +227,16 @@ namespace
         {
             if (fp)
                 std::fclose(fp);
+            // FileDispositionInformation: the game deletes its replay cache
+            // (cache:\replay\..., boxer/render .replay and .fi, jpgs) this way at
+            // the start of each fight. Honoured for the cache only, so nothing
+            // the player keeps (saves, content) is ever removed by it.
+            if (deleteOnClose && device && device->writable && !hostPath.empty() &&
+                IsCachePath(guestPath))
+            {
+                std::error_code ec;
+                fs::remove(hostPath, ec);   // a file, or an empty folder
+            }
             if (video)
                 VideoFileClosed();
             if (intro)
@@ -765,7 +787,7 @@ GUEST_IMPORT(NtSetInformationFile)
     case 13: // FileDispositionInformation
         f->deleteOnClose = Ld8(info) != 0;
         if (f->deleteOnClose)
-            TraceCall("NtSetInformationFile", ctx, "delete-on-close requested (ignored)");
+            TraceCall("NtSetInformationFile", ctx, IsCachePath(f->guestPath) ? "delete-on-close (cache: deleted when closed)" : "delete-on-close requested (ignored outside cache:)");
         break;
     case 4:  // FileBasicInformation (timestamps/attributes): ignore
         break;
