@@ -1481,8 +1481,18 @@ namespace
         wet::renderer_host::StartWatchTrace();
         std::vector<Shot> shots;
         uint32_t last = 0xFFFFFFFF;
+        // WET_BURST_FRAMES=<n> (default 48) and WET_BURST_SCALE=<1..4> (each
+        // frame shrunk by that factor, so a long burst at 4K fits in memory:
+        // 360 frames at 2 = 1920x1080, about 3 GB while capturing).
+        size_t wantFrames = 48;
+        if (const char* v = std::getenv("WET_BURST_FRAMES"))
+            wantFrames = std::clamp<size_t>(size_t(std::atoi(v)), 1, 2000);
+        uint32_t scale = 1;
+        if (const char* v = std::getenv("WET_BURST_SCALE"))
+            scale = std::clamp<uint32_t>(uint32_t(std::atoi(v)), 1, 4);
         auto start = std::chrono::steady_clock::now();
-        while (shots.size() < 48 && std::chrono::steady_clock::now() - start < std::chrono::seconds(10))
+        auto limit = std::chrono::seconds(10 + wantFrames / 15);
+        while (shots.size() < wantFrames && std::chrono::steady_clock::now() - start < limit)
         {
             auto* cp = s_graphics ? s_graphics->command_processor() : nullptr;
             xe::ui::Presenter* presenter = s_graphics ? s_graphics->presenter() : nullptr;
@@ -1496,7 +1506,34 @@ namespace
             wet::renderer_host::TraceEvent('C', swap, uint32_t(shots.size()));
             Shot shot{ swap, {} };
             if (presenter->CaptureGuestOutput(shot.image) && shot.image.width)
+            {
+                if (scale > 1)
+                {
+                    // Box filter down to width/scale x height/scale, still RGBA.
+                    xe::ui::RawImage& src = shot.image;
+                    uint32_t w = src.width / scale, h = src.height / scale;
+                    std::vector<uint8_t> out(size_t(w) * h * 4);
+                    uint32_t n = scale * scale;
+                    for (uint32_t y = 0; y < h; y++)
+                        for (uint32_t x = 0; x < w; x++)
+                            for (uint32_t c = 0; c < 3; c++)
+                            {
+                                uint32_t sum = 0;
+                                for (uint32_t dy = 0; dy < scale; dy++)
+                                {
+                                    const uint8_t* row = src.data.data() + size_t(y * scale + dy) * src.stride;
+                                    for (uint32_t dx = 0; dx < scale; dx++)
+                                        sum += row[(x * scale + dx) * 4 + c];
+                                }
+                                out[(size_t(y) * w + x) * 4 + c] = uint8_t(sum / n);
+                            }
+                    src.data = std::move(out);
+                    src.width = w;
+                    src.height = h;
+                    src.stride = w * 4;
+                }
                 shots.push_back(std::move(shot));
+            }
         }
         std::error_code ec;
         std::filesystem::create_directories("frames", ec);
@@ -2083,7 +2120,7 @@ namespace wet::renderer
     {
         if (!s_graphics || s_burstRunning.exchange(true))
             return;
-        wet::renderer_host::Log("Renderer: F8 - capturing the next 48 frames");
+        wet::renderer_host::Log("Renderer: F8 - capturing frames (WET_BURST_FRAMES, default 48)");
         wet::renderer_host::StartThread(BurstThread, nullptr, "Burst capture");
     }
 
