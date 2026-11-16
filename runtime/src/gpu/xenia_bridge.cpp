@@ -1806,6 +1806,16 @@ namespace wet::renderer
                 round = std::atoi(v) != 0;
             cvars::depth_float24_round = round;
         }
+        // As FNC Reborn (another Fight Night port) sets it: Fight Night's 2x MSAA
+        // emulated with 4x samples rather than the host's own 2x pattern.
+        // WET_NATIVE_2X_MSAA=0/1 overrides.
+        if (GAME_FNC)
+            cvars::native_2x_msaa = false;
+        xe::gpu::wet_rt_no_edram_wrap = GAME_FNC;
+        if (const char* v = std::getenv("WET_RT_NO_EDRAM_WRAP"))
+            xe::gpu::wet_rt_no_edram_wrap = std::atoi(v) != 0;
+        if (const char* v = std::getenv("WET_NATIVE_2X_MSAA"))
+            cvars::native_2x_msaa = std::atoi(v) != 0;
         xe::gpu::wet_real_occlusion = GAME_FNC;
         if (const char* v = std::getenv("WET_REAL_OCCLUSION"))
             xe::gpu::wet_real_occlusion = std::atoi(v);
