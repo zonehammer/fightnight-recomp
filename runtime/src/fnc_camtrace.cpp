@@ -13,6 +13,7 @@
 #include <atomic>
 #include <cstdlib>
 #include <cstdio>
+#include <cstring>
 #include <mutex>
 #include <set>
 #include <string>
@@ -34,6 +35,59 @@ namespace
             return !(v && v[0] == '0');
         }();
         return on;
+    }
+
+    float LdF(uint8_t* base, uint32_t a)
+    {
+        uint32_t v = PPC_LOAD_U32(a);
+        float f;
+        std::memcpy(&f, &v, 4);
+        return f;
+    }
+
+    // Details of the two places the trace pointed at (prison fight, camera
+    // stuck after an event 5 was sent and sub_8231C9D0 ran twice a frame).
+    void Detail(uint32_t addr, PPCContext& ctx, uint8_t* base)
+    {
+        static std::atomic<int> lines{ 0 };
+        if (lines.load(std::memory_order_relaxed) > 3000)
+            return;
+        if (addr == 0x8231C9D0)
+        {
+            // The director's current camera (+8 of the object at +4): used if its
+            // weights (+80, +4) are above 0, otherwise a default camera.
+            uint32_t self = ctx.r3.u32, inner = self ? PPC_LOAD_U32(self + 4) : 0;
+            uint32_t cam = inner ? PPC_LOAD_U32(inner + 8) : 0;
+            float w80 = cam ? LdF(base, cam + 80) : 0, w4 = cam ? LdF(base, cam + 4) : 0;
+            bool used = cam && w80 > 0 && w4 > 0;
+            struct Last { uint32_t self, cam; bool used; };
+            static Last last[4];
+            static std::mutex lock;
+            std::lock_guard g(lock);
+            int slot = -1;
+            for (int k = 0; k < 4; k++)
+                if (last[k].self == self) slot = k;
+            if (slot < 0)
+                for (int k = 0; k < 4; k++)
+                    if (!last[k].self) { slot = k; last[k] = { self, 0xFFFFFFFF, false }; break; }
+            if (slot >= 0 && (last[slot].cam != cam || last[slot].used != used))
+            {
+                last[slot].cam = cam;
+                last[slot].used = used;
+                lines++;
+                wet::Log("CamTrace: director %08X camera %08X (weights %.3f %.3f) -> %s camera", self, cam, w80, w4,
+                         used ? "its" : "the DEFAULT");
+            }
+        }
+        else if (addr == 0x82319CC0)
+        {
+            uint32_t inner = ctx.r3.u32 ? PPC_LOAD_U32(ctx.r3.u32 + 4) : 0;
+            uint32_t r9 = inner ? PPC_LOAD_U32(inner + 12) : 0;
+            float gate = r9 ? LdF(base, r9 + 12) : 0;
+            lines++;
+            wet::Log("CamTrace: event %d (r5 %d, f1 %.3f) to %08X%s", int(ctx.r4.s32), int(ctx.r5.s32), ctx.f1.f64,
+                     ctx.r3.u32, gate > 0 ? " - ignored (busy)" : "");
+        }
     }
 
     void Note(int i, uint32_t r4, uint32_t r5)
@@ -90,7 +144,11 @@ namespace wet::fnc
     PPC_FUNC(name)                                                         \
     {                                                                      \
         if (Enabled())                                                     \
+        {                                                                  \
             Note(i, ctx.r4.u32, ctx.r5.u32);                               \
+            if (kAddr[i] == 0x8231C9D0 || kAddr[i] == 0x82319CC0)          \
+                Detail(kAddr[i], ctx, base);                               \
+        }                                                                  \
         __imp__##name(ctx, base);                                          \
     }
 
