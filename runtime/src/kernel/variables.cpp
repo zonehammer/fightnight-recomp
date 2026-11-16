@@ -33,6 +33,8 @@ namespace wet
         s_timebaseStartNs = os::MonotonicNs();
         if (g_wetVmxUnfused)
             Log("CPU: WET_VMX_UNFUSED - vector multiply-add with two roundings (as 0.1.1)");
+        if (g_wetVmxEstimate)
+            Log("CPU: WET_VMX_ESTIMATE - vector reciprocal / square root estimates (~12 bits)");
 
         for (auto& imp : g_module.imports)
         {
@@ -109,6 +111,12 @@ namespace wet
 // WET_VMX_UNFUSED=1: vmaddfp / vnmsubfp with two roundings (see wet_ppc_hooks.h).
 int g_wetVmxUnfused = [] {
     const char* v = std::getenv("WET_VMX_UNFUSED");
+    return v && v[0] == '1' ? 1 : 0;
+}();
+
+// WET_VMX_ESTIMATE=1: vrefp / vrsqrtefp as ~12-bit estimates (see wet_ppc_hooks.h).
+int g_wetVmxEstimate = [] {
+    const char* v = std::getenv("WET_VMX_ESTIMATE");
     return v && v[0] == '1' ? 1 : 0;
 }();
 

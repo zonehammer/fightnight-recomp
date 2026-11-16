@@ -13,6 +13,9 @@ uint64_t WetQueryTimebase();
 // vmaddfp / vnmsubfp: fused (one rounding, as the console) unless
 // WET_VMX_UNFUSED=1 at startup (diagnostics: the 0.1.1 two-rounding form).
 extern int g_wetVmxUnfused;
+// vrefp / vrsqrtefp: exact unless WET_VMX_ESTIMATE=1 at startup (diagnostics:
+// ~12-bit estimates like the console's).
+extern int g_wetVmxEstimate;
 
 // Indirect calls (bctrl / function pointers / vtables): report misses instead of
 // jumping through a null table entry.
