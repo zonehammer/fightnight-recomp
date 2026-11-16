@@ -299,6 +299,22 @@ namespace wet
                 if (events.empty())
                     return;
                 double t = SinceStart();
+                // WET_REPLAY_STAY=1: at the end, control goes back to the player
+                // (a recording that gets you somewhere, e.g. a fight to test).
+                static const bool stay = [] {
+                    const char* v = std::getenv("WET_REPLAY_STAY");
+                    return v && v[0] == '1';
+                }();
+                if (stay && t > events.back().t + 0.5)
+                {
+                    static bool said = false;
+                    if (!said)
+                    {
+                        said = true;
+                        Log("Input: end of the recording; the controls are yours");
+                    }
+                    return;
+                }
                 if (t > events.back().t + 10)
                 {
                     Log("Autopress: script finished (end of the recording)");
