@@ -1798,9 +1798,10 @@ namespace wet::renderer
             if (const char* v = std::getenv("WET_DEPTH24_PS"))
                 ps = std::atoi(v) != 0;
             cvars::depth_float24_convert_in_pixel_shader = ps;
-            // Rounded to nearest rather than truncated, as the console does
-            // (residual flicker on necks and faces at 4K).
-            bool round = GAME_FNC;
+            // Rounding to nearest (WET_DEPTH24_ROUND=1) eased the last flicker
+            // on necks at 4K but broke the camera again (its visibility checks
+            // came back 0 more often): truncated, as Xenia does by default.
+            bool round = false;
             if (const char* v = std::getenv("WET_DEPTH24_ROUND"))
                 round = std::atoi(v) != 0;
             cvars::depth_float24_round = round;
