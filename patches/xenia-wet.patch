@@ -6995,10 +6995,18 @@ index 1f68826..cbdcd1d 100644
  
    const D3D12CommandProcessor& command_processor_;
 diff --git a/src/xenia/gpu/d3d12/pipeline_cache.cc b/src/xenia/gpu/d3d12/pipeline_cache.cc
-index a81b196..c211142 100644
+index a81b196..f70b8a1 100644
 --- a/src/xenia/gpu/d3d12/pipeline_cache.cc
 +++ b/src/xenia/gpu/d3d12/pipeline_cache.cc
-@@ -35,6 +35,9 @@
+@@ -13,6 +13,7 @@
+ #include <atomic>
+ #include <cinttypes>
+ #include <cmath>
++#include <cstdlib>
+ #include <cstring>
+ #include <deque>
+ #include <mutex>
+@@ -35,6 +36,9 @@
  #include "xenia/base/xxhash.h"
  #include "xenia/gpu/d3d12/d3d12_command_processor.h"
  #include "xenia/gpu/d3d12/d3d12_render_target_cache.h"
@@ -7008,7 +7016,7 @@ index a81b196..c211142 100644
  #include "xenia/gpu/draw_util.h"
  #include "xenia/gpu/dxbc.h"
  #include "xenia/gpu/dxbc_shader_translator.h"
-@@ -692,6 +695,29 @@ void PipelineCache::InitializeShaderStorage(
+@@ -692,6 +696,29 @@ void PipelineCache::InitializeShaderStorage(
        ++pipelines_created;
      }
  
@@ -7038,7 +7046,7 @@ index a81b196..c211142 100644
      if (!creation_threads_.empty()) {
        CreateQueuedPipelinesOnProcessorThread();
        if (creation_threads_.size() > creation_thread_original_count) {
-@@ -793,6 +819,12 @@ void PipelineCache::ShutdownShaderStorage() {
+@@ -793,6 +820,12 @@ void PipelineCache::ShutdownShaderStorage() {
    shader_storage_title_id_ = 0;
  }
  
@@ -7051,7 +7059,7 @@ index a81b196..c211142 100644
  void PipelineCache::EndSubmission() {
    if (shader_storage_file_flush_needed_ ||
        pipeline_storage_file_flush_needed_) {
-@@ -809,6 +841,14 @@ void PipelineCache::EndSubmission() {
+@@ -809,6 +842,14 @@ void PipelineCache::EndSubmission() {
      shader_storage_file_flush_needed_ = false;
      pipeline_storage_file_flush_needed_ = false;
    }
@@ -7066,7 +7074,7 @@ index a81b196..c211142 100644
    if (!creation_threads_.empty()) {
      CreateQueuedPipelinesOnProcessorThread();
      // Await creation of all queued pipelines.
-@@ -2996,6 +3036,23 @@ ID3D12PipelineState* PipelineCache::CreateD3D12Pipeline(
+@@ -2996,6 +3037,23 @@ ID3D12PipelineState* PipelineCache::CreateD3D12Pipeline(
          state_desc.PS.pShaderBytecode = shaders::float24_truncate_ps;
          state_desc.PS.BytecodeLength = sizeof(shaders::float24_truncate_ps);
        }
@@ -7090,7 +7098,34 @@ index a81b196..c211142 100644
      }
    }
  
-@@ -3347,6 +3404,19 @@ void PipelineCache::CreationThread(size_t thread_index) {
+@@ -3037,6 +3095,26 @@ ID3D12PipelineState* PipelineCache::CreateD3D12Pipeline(
+       description.depth_bias_slope_scaled *
+       float(std::max(render_target_cache_.draw_resolution_scale_x(),
+                      render_target_cache_.draw_resolution_scale_y()));
++#if XE_WET_RUNTIME
++  // WET diagnostics: WET_DEPTH_BIAS_SCALE / WET_SLOPE_BIAS_SCALE multiply the
++  // constant / slope-scaled polygon offset (Fight Night: self-shadowing
++  // flicker on necks and waists - is the guest's offset converted too small?).
++  {
++    static const float wet_bias_scale = [] {
++      const char* v = std::getenv("WET_DEPTH_BIAS_SCALE");
++      return v ? float(std::atof(v)) : 1.0f;
++    }();
++    static const float wet_slope_scale = [] {
++      const char* v = std::getenv("WET_SLOPE_BIAS_SCALE");
++      return v ? float(std::atof(v)) : 1.0f;
++    }();
++    if (wet_bias_scale != 1.0f) {
++      state_desc.RasterizerState.DepthBias =
++          INT(float(state_desc.RasterizerState.DepthBias) * wet_bias_scale);
++    }
++    state_desc.RasterizerState.SlopeScaledDepthBias *= wet_slope_scale;
++  }
++#endif
+   state_desc.RasterizerState.DepthClipEnable =
+       description.depth_clip ? TRUE : FALSE;
+   uint32_t msaa_sample_count = uint32_t(1)
+@@ -3347,6 +3425,19 @@ void PipelineCache::CreationThread(size_t thread_index) {
      {
        std::lock_guard<std::mutex> lock(creation_request_lock_);
        --creation_threads_busy_;
