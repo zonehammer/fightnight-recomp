@@ -6559,7 +6559,7 @@ index 901d459..0bc8c33 100644
      return true;
    }
 diff --git a/src/xenia/gpu/d3d12/d3d12_texture_cache.cc b/src/xenia/gpu/d3d12/d3d12_texture_cache.cc
-index b96c200..6cd4490 100644
+index b96c200..026e2ad 100644
 --- a/src/xenia/gpu/d3d12/d3d12_texture_cache.cc
 +++ b/src/xenia/gpu/d3d12/d3d12_texture_cache.cc
 @@ -10,6 +10,7 @@
@@ -6592,7 +6592,36 @@ index b96c200..6cd4490 100644
    if (aniso_filter != xenos::AnisoFilter::kDisabled) {
      parameters.mag_linear = 1;
      parameters.min_linear = 1;
-@@ -1416,10 +1426,84 @@ ID3D12Resource* D3D12TextureCache::RequestSwapTexture(
+@@ -1006,6 +1016,28 @@ D3D12TextureCache::SamplerParameters D3D12TextureCache::GetSamplerParameters(
+     parameters.mip_linear = mip_filter == xenos::TextureFilter::kLinear;
+   }
+   parameters.mip_base_map = mip_filter == xenos::TextureFilter::kBaseMap;
++#if XE_WET_RUNTIME
++  // WET: depth textures (k_24_8 / k_24_8_FLOAT - resolved depth buffers, such
++  // as shadow maps) can't be filtered on the Xbox 360: point sampled whatever
++  // the shader asks for (the TODO above). Fight Night reads its shadow map
++  // with a bilinear override in some shaders; filtered on the host, depths
++  // were averaged across silhouettes before the shadow comparison - flicker
++  // on necks and waists as the fighters moved. WET_DEPTH_TEX_FILTER=1 lets
++  // the host filter them again.
++  {
++    static const bool wet_filter_depth = [] {
++      const char* v = std::getenv("WET_DEPTH_TEX_FILTER");
++      return v && std::atoi(v) != 0;
++    }();
++    if (!wet_filter_depth && (fetch.format == xenos::TextureFormat::k_24_8 ||
++                              fetch.format == xenos::TextureFormat::k_24_8_FLOAT)) {
++      parameters.aniso_filter = xenos::AnisoFilter::kDisabled;
++      parameters.mag_linear = 0;
++      parameters.min_linear = 0;
++      parameters.mip_linear = 0;
++    }
++  }
++#endif
+ 
+   return parameters;
+ }
+@@ -1416,10 +1448,84 @@ ID3D12Resource* D3D12TextureCache::RequestSwapTexture(
        key.dimension != xenos::DataDimension::k2DOrStacked) {
      return nullptr;
    }
@@ -6677,7 +6706,7 @@ index b96c200..6cd4490 100644
    texture->MarkAsUsed();
    // The swap texture is likely to be used only for the presentation compute
    // shader, and not during emulation, where it'd be NON_PIXEL_SHADER_RESOURCE |
-@@ -1597,6 +1681,10 @@ std::unique_ptr<TextureCache::Texture> D3D12TextureCache::CreateTexture(
+@@ -1597,6 +1703,10 @@ std::unique_ptr<TextureCache::Texture> D3D12TextureCache::CreateTexture(
  bool D3D12TextureCache::LoadTextureDataFromResidentMemoryImpl(Texture& texture,
                                                                bool load_base,
                                                                bool load_mips) {
@@ -6688,7 +6717,7 @@ index b96c200..6cd4490 100644
    D3D12Texture& d3d12_texture = static_cast<D3D12Texture&>(texture);
    TextureKey texture_key = d3d12_texture.key();
  
-@@ -1644,6 +1732,59 @@ bool D3D12TextureCache::LoadTextureDataFromResidentMemoryImpl(Texture& texture,
+@@ -1644,6 +1754,59 @@ bool D3D12TextureCache::LoadTextureDataFromResidentMemoryImpl(Texture& texture,
    uint32_t texture_resolution_scale_y =
        texture_resolution_scaled ? draw_resolution_scale_y() : 1;
  
@@ -6748,7 +6777,7 @@ index b96c200..6cd4490 100644
    // The loop counter can mean two things depending on whether the packed mip
    // tail is stored as mip 0, because in this case, it would be ambiguous since
    // both the base and the mips would be on "level 0", but stored in separate
-@@ -1721,6 +1862,11 @@ bool D3D12TextureCache::LoadTextureDataFromResidentMemoryImpl(Texture& texture,
+@@ -1721,6 +1884,11 @@ bool D3D12TextureCache::LoadTextureDataFromResidentMemoryImpl(Texture& texture,
      level_host_slice_layout.Footprint.Width = xe::round_up(
          level_host_slice_layout.Footprint.Width * texture_resolution_scale_x,
          UINT(host_block_width));
@@ -6760,7 +6789,7 @@ index b96c200..6cd4490 100644
      level_host_slice_layout.Footprint.Height = xe::round_up(
          level_host_slice_layout.Footprint.Height * texture_resolution_scale_y,
          UINT(host_block_height));
-@@ -1849,6 +1995,15 @@ bool D3D12TextureCache::LoadTextureDataFromResidentMemoryImpl(Texture& texture,
+@@ -1849,6 +2017,15 @@ bool D3D12TextureCache::LoadTextureDataFromResidentMemoryImpl(Texture& texture,
                                      block_height * texture_resolution_scale_y;
      load_constants.size_blocks[2] = level_depth;
      load_constants.height_texels = level_height;
@@ -6776,7 +6805,7 @@ index b96c200..6cd4490 100644
  
      uint32_t group_count_x =
          (load_constants.size_blocks[0] +
-@@ -1946,8 +2101,14 @@ bool D3D12TextureCache::LoadTextureDataFromResidentMemoryImpl(Texture& texture,
+@@ -1946,8 +2123,14 @@ bool D3D12TextureCache::LoadTextureDataFromResidentMemoryImpl(Texture& texture,
      } else {
        source_box_ptr = nullptr;
      }
@@ -6792,7 +6821,7 @@ index b96c200..6cd4490 100644
                                          &location_source, source_box_ptr);
        location_dest.SubresourceIndex += texture_level_count;
        location_source.PlacedFootprint.Offset += host_slice_size;
-@@ -1956,6 +2117,12 @@ bool D3D12TextureCache::LoadTextureDataFromResidentMemoryImpl(Texture& texture,
+@@ -1956,6 +2139,12 @@ bool D3D12TextureCache::LoadTextureDataFromResidentMemoryImpl(Texture& texture,
  
    command_processor_.ReleaseScratchGPUBuffer(copy_buffer, copy_buffer_state);
  
