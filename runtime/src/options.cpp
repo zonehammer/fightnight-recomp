@@ -111,8 +111,10 @@ namespace wet::options
             std::fprintf(f, "filter = %d\n", s_filter.load());
             std::fprintf(f, "# sharpness (NVIDIA Image Scaling): 0 to 100\n");
             std::fprintf(f, "sharpness = %d\n", s_sharpness.load());
+#if !GAME_FNC
             std::fprintf(f, "# adaptive_watch: 1 = skip write traps on memory the game rewrites every frame (faster), 0 = trap every write\n");
             std::fprintf(f, "adaptive_watch = %d\n", s_adaptiveWatch.load());
+#endif
 #if GAME_WET
             std::fprintf(f, "# refresh_gpu_memory: 1 = upload buffers to the GPU again every frame (testing graphics glitches; slower)\n");
             std::fprintf(f, "refresh_gpu_memory = %d\n", s_refreshGpuMemory.load());
@@ -380,6 +382,13 @@ namespace wet::options
             s_gpuWait = std::atoi(v) != 0;
         if (const char* v = std::getenv("WET_ADAPTIVE_WATCH"))
             s_adaptiveWatch = std::atoi(v) != 0;
+#if GAME_FNC
+        // Fight Night: always off, and not offered. Skipping write traps on
+        // pages the game rewrites every frame left the GPU drawing the
+        // fighters from stale copies now and then: flicker along the neckline,
+        // chest and waist that the Xbox and other ports don't have.
+        s_adaptiveWatch = false;
+#endif
         SetAdaptiveWatch(s_adaptiveWatch != 0);
         Save();
         ApplyFps();

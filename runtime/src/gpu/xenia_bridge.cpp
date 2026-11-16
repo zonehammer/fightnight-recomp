@@ -1232,9 +1232,12 @@ namespace
                          "Emulates the console's video memory without render target copies. Can be faster or slower: compare FPS. Needs a restart."))
                 wet::options::SetRov(rov);
 #endif
+#if !GAME_FNC
+            // Fight Night: always off (options.cpp - fighter flicker).
             bool adaptive = wet::options::AdaptiveWatch();
             if (RowCheck("Fast memory tracking", &adaptive, "Turn off if textures or models glitch."))
                 wet::options::SetAdaptiveWatchOption(adaptive);
+#endif
 #if GAME_WET
             bool gpuWait = wet::options::GpuWait();
             if (RowCheck("Low-CPU GPU wait", &gpuWait, "The render thread sleeps while it waits for the GPU instead of spinning."))
