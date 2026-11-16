@@ -1789,6 +1789,16 @@ namespace wet::renderer
         // much of each fighter it can see): with a fixed answer it swung out to
         // the crowd near the ropes. They're measured on the host GPU instead
         // (D3D12; WET_REAL_OCCLUSION=0/1 overrides).
+        // Fight Night's shadow maps are 24-bit float depth: converted from the
+        // host's 32-bit depth only at resolve time, characters' self-shadowing
+        // flickered (worse with resolution scaling). Rounded to the guest's
+        // precision in the pixel shaders instead. WET_DEPTH24_PS=0/1 overrides.
+        {
+            bool ps = GAME_FNC;
+            if (const char* v = std::getenv("WET_DEPTH24_PS"))
+                ps = std::atoi(v) != 0;
+            cvars::depth_float24_convert_in_pixel_shader = ps;
+        }
         xe::gpu::wet_real_occlusion = GAME_FNC;
         if (const char* v = std::getenv("WET_REAL_OCCLUSION"))
             xe::gpu::wet_real_occlusion = std::atoi(v);
