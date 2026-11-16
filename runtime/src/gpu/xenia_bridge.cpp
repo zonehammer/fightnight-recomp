@@ -1798,6 +1798,12 @@ namespace wet::renderer
             if (const char* v = std::getenv("WET_DEPTH24_PS"))
                 ps = std::atoi(v) != 0;
             cvars::depth_float24_convert_in_pixel_shader = ps;
+            // Rounded to nearest rather than truncated, as the console does
+            // (residual flicker on necks and faces at 4K).
+            bool round = GAME_FNC;
+            if (const char* v = std::getenv("WET_DEPTH24_ROUND"))
+                round = std::atoi(v) != 0;
+            cvars::depth_float24_round = round;
         }
         xe::gpu::wet_real_occlusion = GAME_FNC;
         if (const char* v = std::getenv("WET_REAL_OCCLUSION"))
