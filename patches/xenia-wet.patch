@@ -3568,7 +3568,7 @@ index 8f6087b05..47c87eec0 100644
  
  static void set_name(HANDLE thread, const std::string_view name) {
 diff --git a/src/xenia/gpu/command_processor.cc b/src/xenia/gpu/command_processor.cc
-index ce08d19bd..90082af6f 100644
+index ce08d19bd..6d95fbf1b 100644
 --- a/src/xenia/gpu/command_processor.cc
 +++ b/src/xenia/gpu/command_processor.cc
 @@ -9,6 +9,15 @@
@@ -4116,7 +4116,27 @@ index ce08d19bd..90082af6f 100644
  
    return true;
  }
-@@ -1455,10 +1884,14 @@ bool CommandProcessor::ExecutePacketType3_SET_CONSTANT(RingBuffer* reader,
+@@ -1272,6 +1701,19 @@ bool CommandProcessor::ExecutePacketType3_EVENT_WRITE_ZPD(RingBuffer* reader,
+     bool is_end_via_z_fail = pSampleCounts->ZFail_A == kQueryFinished &&
+                              pSampleCounts->ZFail_B == kQueryFinished;
+     std::memset(pSampleCounts, 0, sizeof(xe_gpu_depth_sample_counts));
++#if XE_WET_RUNTIME
++    if (is_end_via_z_pass || is_end_via_z_fail) {
++      static uint32_t queries = 0;
++      uint32_t n = ++queries;
++      if (wet_log_hook && (n & (n - 1)) == 0) {
++        char text[120];
++        std::snprintf(text, sizeof(text),
++                      "GPU: occlusion query #%u answered with %d samples", n,
++                      fake_sample_count);
++        wet_log_hook(text);
++      }
++    }
++#endif
+     if (is_end_via_z_pass || is_end_via_z_fail) {
+       pSampleCounts->ZPass_A = fake_sample_count;
+       pSampleCounts->Total_A = fake_sample_count;
+@@ -1455,10 +1897,14 @@ bool CommandProcessor::ExecutePacketType3_SET_CONSTANT(RingBuffer* reader,
        reader->AdvanceRead((count - 1) * sizeof(uint32_t));
        return true;
    }
@@ -4131,7 +4151,7 @@ index ce08d19bd..90082af6f 100644
    return true;
  }
  
-@@ -1467,10 +1900,14 @@ bool CommandProcessor::ExecutePacketType3_SET_CONSTANT2(RingBuffer* reader,
+@@ -1467,10 +1913,14 @@ bool CommandProcessor::ExecutePacketType3_SET_CONSTANT2(RingBuffer* reader,
                                                          uint32_t count) {
    uint32_t offset_type = reader->ReadAndSwap<uint32_t>();
    uint32_t index = offset_type & 0xFFFF;
@@ -4146,7 +4166,7 @@ index ce08d19bd..90082af6f 100644
    return true;
  }
  
-@@ -1506,11 +1943,20 @@ bool CommandProcessor::ExecutePacketType3_LOAD_ALU_CONSTANT(RingBuffer* reader,
+@@ -1506,11 +1956,20 @@ bool CommandProcessor::ExecutePacketType3_LOAD_ALU_CONSTANT(RingBuffer* reader,
        return true;
    }
    trace_writer_.WriteMemoryRead(CpuToGpu(address), size_dwords * 4);
@@ -4167,7 +4187,7 @@ index ce08d19bd..90082af6f 100644
    return true;
  }
  
-@@ -1518,10 +1964,14 @@ bool CommandProcessor::ExecutePacketType3_SET_SHADER_CONSTANTS(
+@@ -1518,10 +1977,14 @@ bool CommandProcessor::ExecutePacketType3_SET_SHADER_CONSTANTS(
      RingBuffer* reader, uint32_t packet, uint32_t count) {
    uint32_t offset_type = reader->ReadAndSwap<uint32_t>();
    uint32_t index = offset_type & 0xFFFF;

@@ -1781,6 +1781,10 @@ namespace wet::renderer
                 readback = std::atoi(v);
             xe::gpu::d3d12::wet_readback_resolve = readback;
         }
+        // Occlusion queries: Xenia answers them with a fixed sample count.
+        // WET_OCCLUSION_SAMPLES=<n> sets it (diagnostics: the Fight Night camera).
+        if (const char* v = std::getenv("WET_OCCLUSION_SAMPLES"))
+            cvars::query_occlusion_fake_sample_count = std::atoi(v);
         // Skipping render target copies back to an unchanged target: right for
         // WET, but in Conan, with resolution scaling, it now and then shows a
         // stale (black) frame - about once a second.
