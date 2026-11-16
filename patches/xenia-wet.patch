@@ -1,5 +1,5 @@
 diff --git a/src/xenia/apu/xaudio2/xaudio2_api.h b/src/xenia/apu/xaudio2/xaudio2_api.h
-index 00c42349d..307389334 100644
+index 00c4234..3073893 100644
 --- a/src/xenia/apu/xaudio2/xaudio2_api.h
 +++ b/src/xenia/apu/xaudio2/xaudio2_api.h
 @@ -312,4 +312,14 @@ DECLARE_INTERFACE(IXAudio2VoiceCallback) {
@@ -18,7 +18,7 @@ index 00c42349d..307389334 100644
 +
  #endif  // XENIA_APU_XAUDIO2_XAUDIO2_API_H_
 diff --git a/src/xenia/apu/xma_context.cc b/src/xenia/apu/xma_context.cc
-index 27b07ba28..77f40ae0d 100644
+index 27b07ba..77f40ae 100644
 --- a/src/xenia/apu/xma_context.cc
 +++ b/src/xenia/apu/xma_context.cc
 @@ -9,11 +9,11 @@
@@ -884,7 +884,7 @@ index 27b07ba28..77f40ae0d 100644
      }
    }
 diff --git a/src/xenia/apu/xma_context.h b/src/xenia/apu/xma_context.h
-index 52e97ee47..7b2ff2734 100644
+index 52e97ee..7b2ff27 100644
 --- a/src/xenia/apu/xma_context.h
 +++ b/src/xenia/apu/xma_context.h
 @@ -14,8 +14,14 @@
@@ -1164,7 +1164,7 @@ index 52e97ee47..7b2ff2734 100644
  }  // namespace apu
 diff --git a/src/xenia/apu/xma_context_new.cc b/src/xenia/apu/xma_context_new.cc
 new file mode 100644
-index 000000000..0791f96cb
+index 0000000..0791f96
 --- /dev/null
 +++ b/src/xenia/apu/xma_context_new.cc
 @@ -0,0 +1,1062 @@
@@ -2232,7 +2232,7 @@ index 000000000..0791f96cb
 +}  // namespace xe
 diff --git a/src/xenia/apu/xma_context_new.h b/src/xenia/apu/xma_context_new.h
 new file mode 100644
-index 000000000..a938c5b69
+index 0000000..a938c5b
 --- /dev/null
 +++ b/src/xenia/apu/xma_context_new.h
 @@ -0,0 +1,146 @@
@@ -2384,7 +2384,7 @@ index 000000000..a938c5b69
 +#endif  // XENIA_APU_XMA_CONTEXT_H_
 diff --git a/src/xenia/apu/xma_context_old_wet.cc b/src/xenia/apu/xma_context_old_wet.cc
 new file mode 100644
-index 000000000..5f9756c50
+index 0000000..5f9756c
 --- /dev/null
 +++ b/src/xenia/apu/xma_context_old_wet.cc
 @@ -0,0 +1,924 @@
@@ -3314,7 +3314,7 @@ index 000000000..5f9756c50
 +}  // namespace xe
 diff --git a/src/xenia/apu/xma_context_old_wet.h b/src/xenia/apu/xma_context_old_wet.h
 new file mode 100644
-index 000000000..29906ea85
+index 0000000..29906ea
 --- /dev/null
 +++ b/src/xenia/apu/xma_context_old_wet.h
 @@ -0,0 +1,97 @@
@@ -3416,7 +3416,7 @@ index 000000000..29906ea85
 +
 +#endif
 diff --git a/src/xenia/apu/xma_helpers.h b/src/xenia/apu/xma_helpers.h
-index 593d2d071..d0779cafc 100644
+index 593d2d0..d0779ca 100644
 --- a/src/xenia/apu/xma_helpers.h
 +++ b/src/xenia/apu/xma_helpers.h
 @@ -2,7 +2,7 @@
@@ -3479,7 +3479,7 @@ index 593d2d071..d0779cafc 100644
  }  // namespace apu
  }  // namespace xe
 diff --git a/src/xenia/base/clock_x64.cc b/src/xenia/base/clock_x64.cc
-index 14155303a..538db134b 100644
+index 1415530..538db13 100644
 --- a/src/xenia/base/clock_x64.cc
 +++ b/src/xenia/base/clock_x64.cc
 @@ -16,7 +16,8 @@
@@ -3493,7 +3493,7 @@ index 14155303a..538db134b 100644
    {                                                          \
      int __xe_cpuid_registers_[4];                            \
 diff --git a/src/xenia/base/mapped_memory_win.cc b/src/xenia/base/mapped_memory_win.cc
-index f0af5ee7b..023f6fea7 100644
+index f0af5ee..023f6fe 100644
 --- a/src/xenia/base/mapped_memory_win.cc
 +++ b/src/xenia/base/mapped_memory_win.cc
 @@ -28,7 +28,7 @@ namespace xe {
@@ -3506,7 +3506,7 @@ index f0af5ee7b..023f6fea7 100644
    static constexpr HANDLE kMappingHandleInvalid = nullptr;
  
 diff --git a/src/xenia/base/memory.h b/src/xenia/base/memory.h
-index 3ed4dc3ab..8cb95f239 100644
+index 3ed4dc3..8cb95f2 100644
 --- a/src/xenia/base/memory.h
 +++ b/src/xenia/base/memory.h
 @@ -118,7 +118,7 @@ bool QueryProtect(void* base_address, size_t& length, PageAccess& access_out);
@@ -3528,7 +3528,7 @@ index 3ed4dc3ab..8cb95f239 100644
  #else
    free(ptr);
 diff --git a/src/xenia/base/profiling.h b/src/xenia/base/profiling.h
-index 24b875967..b6a02cb62 100644
+index 24b8759..b6a02cb 100644
 --- a/src/xenia/base/profiling.h
 +++ b/src/xenia/base/profiling.h
 @@ -20,7 +20,7 @@
@@ -3541,7 +3541,7 @@ index 24b875967..b6a02cb62 100644
  #define XE_OPTION_PROFILING_UI 1
  #else
 diff --git a/src/xenia/base/threading_win.cc b/src/xenia/base/threading_win.cc
-index 8f6087b05..47c87eec0 100644
+index 8f6087b..47c87ee 100644
 --- a/src/xenia/base/threading_win.cc
 +++ b/src/xenia/base/threading_win.cc
 @@ -15,7 +15,7 @@
@@ -3568,7 +3568,7 @@ index 8f6087b05..47c87eec0 100644
  
  static void set_name(HANDLE thread, const std::string_view name) {
 diff --git a/src/xenia/gpu/command_processor.cc b/src/xenia/gpu/command_processor.cc
-index ce08d19bd..8eb433a64 100644
+index ce08d19..8eb433a 100644
 --- a/src/xenia/gpu/command_processor.cc
 +++ b/src/xenia/gpu/command_processor.cc
 @@ -9,6 +9,15 @@
@@ -4212,7 +4212,7 @@ index ce08d19bd..8eb433a64 100644
  }
  
 diff --git a/src/xenia/gpu/command_processor.h b/src/xenia/gpu/command_processor.h
-index ffc8eeffa..92310c9cd 100644
+index ffc8eef..92310c9 100644
 --- a/src/xenia/gpu/command_processor.h
 +++ b/src/xenia/gpu/command_processor.h
 @@ -10,6 +10,7 @@
@@ -4391,7 +4391,7 @@ index ffc8eeffa..92310c9cd 100644
    uint32_t primary_buffer_ptr_ = 0;
    uint32_t primary_buffer_size_ = 0;
 diff --git a/src/xenia/gpu/d3d12/d3d12_command_processor.cc b/src/xenia/gpu/d3d12/d3d12_command_processor.cc
-index 0ec70a7d1..8d832be27 100644
+index 0ec70a7..8d832be 100644
 --- a/src/xenia/gpu/d3d12/d3d12_command_processor.cc
 +++ b/src/xenia/gpu/d3d12/d3d12_command_processor.cc
 @@ -8,6 +8,9 @@
@@ -6144,7 +6144,7 @@ index 0ec70a7d1..8d832be27 100644
  }  // namespace xe
 +#endif
 diff --git a/src/xenia/gpu/d3d12/d3d12_command_processor.h b/src/xenia/gpu/d3d12/d3d12_command_processor.h
-index 88bdcb438..06d56d3c6 100644
+index 88bdcb4..06d56d3 100644
 --- a/src/xenia/gpu/d3d12/d3d12_command_processor.h
 +++ b/src/xenia/gpu/d3d12/d3d12_command_processor.h
 @@ -74,6 +74,47 @@ class D3D12CommandProcessor : public CommandProcessor {
@@ -6377,7 +6377,7 @@ index 88bdcb438..06d56d3c6 100644
    std::vector<D3D12_RESOURCE_BARRIER> barriers_;
  
 diff --git a/src/xenia/gpu/d3d12/d3d12_render_target_cache.cc b/src/xenia/gpu/d3d12/d3d12_render_target_cache.cc
-index 342d282cf..06646c3db 100644
+index 342d282..06646c3 100644
 --- a/src/xenia/gpu/d3d12/d3d12_render_target_cache.cc
 +++ b/src/xenia/gpu/d3d12/d3d12_render_target_cache.cc
 @@ -1297,7 +1297,13 @@ bool D3D12RenderTargetCache::Resolve(const Memory& memory,
@@ -6498,7 +6498,7 @@ index 342d282cf..06646c3db 100644
    GetResolveCopyRectanglesToDump(dump_base, dump_row_length_used, dump_rows,
                                   dump_pitch, dump_rectangles_);
 diff --git a/src/xenia/gpu/d3d12/d3d12_render_target_cache.h b/src/xenia/gpu/d3d12/d3d12_render_target_cache.h
-index c0bb7420a..d5680d710 100644
+index c0bb742..d5680d7 100644
 --- a/src/xenia/gpu/d3d12/d3d12_render_target_cache.h
 +++ b/src/xenia/gpu/d3d12/d3d12_render_target_cache.h
 @@ -86,7 +86,9 @@ class D3D12RenderTargetCache final : public RenderTargetCache {
@@ -6513,7 +6513,7 @@ index c0bb7420a..d5680d710 100644
    // Returns true if any downloads were submitted to the command processor.
    bool InitializeTraceSubmitDownloads();
 diff --git a/src/xenia/gpu/d3d12/d3d12_shared_memory.cc b/src/xenia/gpu/d3d12/d3d12_shared_memory.cc
-index 901d45925..0bc8c33c7 100644
+index 901d459..0bc8c33 100644
 --- a/src/xenia/gpu/d3d12/d3d12_shared_memory.cc
 +++ b/src/xenia/gpu/d3d12/d3d12_shared_memory.cc
 @@ -317,6 +317,11 @@ bool D3D12SharedMemory::AllocateSparseHostGpuMemoryRange(
@@ -6529,7 +6529,7 @@ index 901d45925..0bc8c33c7 100644
      return true;
    }
 diff --git a/src/xenia/gpu/d3d12/d3d12_texture_cache.cc b/src/xenia/gpu/d3d12/d3d12_texture_cache.cc
-index b96c200b9..6cd449021 100644
+index b96c200..6cd4490 100644
 --- a/src/xenia/gpu/d3d12/d3d12_texture_cache.cc
 +++ b/src/xenia/gpu/d3d12/d3d12_texture_cache.cc
 @@ -10,6 +10,7 @@
@@ -6776,7 +6776,7 @@ index b96c200b9..6cd449021 100644
  }
  
 diff --git a/src/xenia/gpu/d3d12/d3d12_texture_cache.h b/src/xenia/gpu/d3d12/d3d12_texture_cache.h
-index 0f9ffa650..f29c11e79 100644
+index 0f9ffa6..f29c11e 100644
 --- a/src/xenia/gpu/d3d12/d3d12_texture_cache.h
 +++ b/src/xenia/gpu/d3d12/d3d12_texture_cache.h
 @@ -144,6 +144,16 @@ class D3D12TextureCache final : public TextureCache {
@@ -6809,7 +6809,7 @@ index 0f9ffa650..f29c11e79 100644
   protected:
    bool IsSignedVersionSeparateForFormat(TextureKey key) const override;
 diff --git a/src/xenia/gpu/d3d12/deferred_command_list.cc b/src/xenia/gpu/d3d12/deferred_command_list.cc
-index adaefcd4c..8b4e7c6eb 100644
+index adaefcd..8b4e7c6 100644
 --- a/src/xenia/gpu/d3d12/deferred_command_list.cc
 +++ b/src/xenia/gpu/d3d12/deferred_command_list.cc
 @@ -8,6 +8,7 @@
@@ -6884,7 +6884,7 @@ index adaefcd4c..8b4e7c6eb 100644
          if (command_list_1 != nullptr) {
            auto& args =
 diff --git a/src/xenia/gpu/d3d12/deferred_command_list.h b/src/xenia/gpu/d3d12/deferred_command_list.h
-index 1f68826d5..cbdcd1d0a 100644
+index 1f68826..cbdcd1d 100644
 --- a/src/xenia/gpu/d3d12/deferred_command_list.h
 +++ b/src/xenia/gpu/d3d12/deferred_command_list.h
 @@ -436,8 +436,56 @@ class DeferredCommandList {
@@ -6965,10 +6965,20 @@ index 1f68826d5..cbdcd1d0a 100644
  
    const D3D12CommandProcessor& command_processor_;
 diff --git a/src/xenia/gpu/d3d12/pipeline_cache.cc b/src/xenia/gpu/d3d12/pipeline_cache.cc
-index a81b19675..c8e75e0cb 100644
+index a81b196..c211142 100644
 --- a/src/xenia/gpu/d3d12/pipeline_cache.cc
 +++ b/src/xenia/gpu/d3d12/pipeline_cache.cc
-@@ -692,6 +692,29 @@ void PipelineCache::InitializeShaderStorage(
+@@ -35,6 +35,9 @@
+ #include "xenia/base/xxhash.h"
+ #include "xenia/gpu/d3d12/d3d12_command_processor.h"
+ #include "xenia/gpu/d3d12/d3d12_render_target_cache.h"
++#if XE_WET_RUNTIME
++#include "xenia/gpu/d3d12/wet_depth24.h"
++#endif
+ #include "xenia/gpu/draw_util.h"
+ #include "xenia/gpu/dxbc.h"
+ #include "xenia/gpu/dxbc_shader_translator.h"
+@@ -692,6 +695,29 @@ void PipelineCache::InitializeShaderStorage(
        ++pipelines_created;
      }
  
@@ -6998,7 +7008,7 @@ index a81b19675..c8e75e0cb 100644
      if (!creation_threads_.empty()) {
        CreateQueuedPipelinesOnProcessorThread();
        if (creation_threads_.size() > creation_thread_original_count) {
-@@ -793,6 +816,12 @@ void PipelineCache::ShutdownShaderStorage() {
+@@ -793,6 +819,12 @@ void PipelineCache::ShutdownShaderStorage() {
    shader_storage_title_id_ = 0;
  }
  
@@ -7011,7 +7021,7 @@ index a81b19675..c8e75e0cb 100644
  void PipelineCache::EndSubmission() {
    if (shader_storage_file_flush_needed_ ||
        pipeline_storage_file_flush_needed_) {
-@@ -809,6 +838,14 @@ void PipelineCache::EndSubmission() {
+@@ -809,6 +841,14 @@ void PipelineCache::EndSubmission() {
      shader_storage_file_flush_needed_ = false;
      pipeline_storage_file_flush_needed_ = false;
    }
@@ -7026,7 +7036,31 @@ index a81b19675..c8e75e0cb 100644
    if (!creation_threads_.empty()) {
      CreateQueuedPipelinesOnProcessorThread();
      // Await creation of all queued pipelines.
-@@ -3347,6 +3384,19 @@ void PipelineCache::CreationThread(size_t thread_index) {
+@@ -2996,6 +3036,23 @@ ID3D12PipelineState* PipelineCache::CreateD3D12Pipeline(
+         state_desc.PS.pShaderBytecode = shaders::float24_truncate_ps;
+         state_desc.PS.BytecodeLength = sizeof(shaders::float24_truncate_ps);
+       }
++#if XE_WET_RUNTIME
++      // WET: shaders that take only SV_Position, which link with the vertex
++      // shaders of draws without a pixel shader (see wet_depth24.h).
++      {
++        static const std::vector<uint8_t> wet_round_ps =
++            wet_depth24::Compile(true);
++        static const std::vector<uint8_t> wet_truncate_ps =
++            wet_depth24::Compile(false);
++        const std::vector<uint8_t>& wet_ps =
++            render_target_cache_.depth_float24_round() ? wet_round_ps
++                                                       : wet_truncate_ps;
++        if (!wet_ps.empty()) {
++          state_desc.PS.pShaderBytecode = wet_ps.data();
++          state_desc.PS.BytecodeLength = wet_ps.size();
++        }
++      }
++#endif
+     }
+   }
+ 
+@@ -3347,6 +3404,19 @@ void PipelineCache::CreationThread(size_t thread_index) {
      {
        std::lock_guard<std::mutex> lock(creation_request_lock_);
        --creation_threads_busy_;
@@ -7047,7 +7081,7 @@ index a81b19675..c8e75e0cb 100644
    }
  }
 diff --git a/src/xenia/gpu/d3d12/pipeline_cache.h b/src/xenia/gpu/d3d12/pipeline_cache.h
-index d1ede5ffa..a07e7ad5f 100644
+index d1ede5f..a07e7ad 100644
 --- a/src/xenia/gpu/d3d12/pipeline_cache.h
 +++ b/src/xenia/gpu/d3d12/pipeline_cache.h
 @@ -10,6 +10,8 @@
@@ -7092,7 +7126,7 @@ index d1ede5ffa..a07e7ad5f 100644
    std::mutex creation_request_lock_;
 diff --git a/src/xenia/gpu/d3d12/wet_colour.h b/src/xenia/gpu/d3d12/wet_colour.h
 new file mode 100644
-index 000000000..84cb604f7
+index 0000000..84cb604
 --- /dev/null
 +++ b/src/xenia/gpu/d3d12/wet_colour.h
 @@ -0,0 +1,142 @@
@@ -7238,9 +7272,143 @@ index 000000000..84cb604f7
 +}  // namespace xe
 +
 +#endif  // XENIA_GPU_D3D12_WET_COLOUR_H_
+diff --git a/src/xenia/gpu/d3d12/wet_depth24.h b/src/xenia/gpu/d3d12/wet_depth24.h
+new file mode 100644
+index 0000000..b314e49
+--- /dev/null
++++ b/src/xenia/gpu/d3d12/wet_depth24.h
+@@ -0,0 +1,128 @@
++// WET: the pixel shaders that round depth to the guest's 24-bit float
++// precision (depth_float24_convert_in_pixel_shader) for draws without a guest
++// pixel shader - shadow maps, depth pre-passes and depth clears.
++//
++// Xenia's prebuilt float24_round_ps / float24_truncate_ps read their position
++// after the full XeVertexPrePS block (16 interpolators and the point
++// parameters), as the vertex shaders once wrote it. The vertex and geometry
++// shaders now write only the interpolators the pixel shader uses, which for a
++// draw without a pixel shader is none: SV_Position is then their first output,
++// the signatures don't link and Direct3D 12 refuses to create the pipeline.
++// The draw was then skipped every frame, so in Fight Night the shadow map was
++// never cleared or drawn into: a dark rectangle on the ring floor and flicker
++// on the fighters. These take only SV_Position, so they link with any vertex
++// or geometry shader. Same maths as the originals; compiled at startup with
++// the system's D3DCompiler_47.dll (as NIS is).
++
++#ifndef XENIA_GPU_D3D12_WET_DEPTH24_H_
++#define XENIA_GPU_D3D12_WET_DEPTH24_H_
++
++#include <cstdint>
++#include <cstring>
++#include <vector>
++
++#include "xenia/base/logging.h"
++#include "xenia/ui/d3d12/d3d12_api.h"
++
++namespace xe {
++namespace gpu {
++namespace d3d12 {
++namespace wet_depth24 {
++
++inline const char* Source() {
++  return R"HLSL(
++// XeFloat32To20e4 and XeFloat20e4To32 from pixel_formats.xesli.
++uint WetFloat32To20e4(uint f32u32, bool round_to_nearest_even) {
++  f32u32 = min((f32u32 <= 0x7FFFFFFFu) ? f32u32 : 0u, 0x3FFFFFF8u);
++  uint denormalized =
++      ((f32u32 & 0x7FFFFFu) | 0x800000u) >> min(113u - (f32u32 >> 23u), 24u);
++  uint f24u32 = (f32u32 < 0x38800000u) ? denormalized : (f32u32 + 0xC8000000u);
++  if (round_to_nearest_even) {
++    f24u32 += 3u + ((f24u32 >> 3u) & 1u);
++  }
++  return (f24u32 >> 3u) & 0xFFFFFFu;
++}
++
++uint WetFloat20e4To32(uint f24u32, bool remap_to_0_to_0_5) {
++  uint mantissa = f24u32 & 0xFFFFFu;
++  uint exponent = f24u32 >> 20u;
++  bool is_denormalized = exponent == 0u;
++  uint mantissa_lzcnt = 20u - firstbithigh(mantissa);
++  exponent = is_denormalized ? (1u - mantissa_lzcnt) : exponent;
++  mantissa =
++      is_denormalized ? ((mantissa << mantissa_lzcnt) & 0xFFFFFu) : mantissa;
++  return (f24u32 != 0u)
++             ? ((exponent + (112u - uint(remap_to_0_to_0_5))) << 23u) |
++                (mantissa << 3u)
++             : 0u;
++}
++
++// float24_round.ps.hlsl
++precise float RoundMain(sample float4 position : SV_Position) : SV_Depth {
++  return asfloat(WetFloat20e4To32(
++      WetFloat32To20e4(asuint(saturate(position.z * 2.0f)), true), true));
++}
++
++// float24_truncate.ps.hlsl
++precise float TruncateMain(sample float4 position : SV_Position)
++    : SV_DepthLessEqual {
++  precise uint depth = asuint(saturate(position.z * 2.0f));
++  if (depth >= 0x2E800000u) {
++    uint exponent = (depth >> 23u) & 0xFFu;
++    uint shift = asuint(max(116 - asint(exponent), 3));
++    depth = depth >> shift << shift;
++  } else {
++    depth = 0u;
++  }
++  return asfloat(depth) * 0.5f;
++}
++)HLSL";
++}
++
++// round: the rounding shader, otherwise the truncating one. Empty if it
++// couldn't be compiled (the caller falls back to Xenia's prebuilt shader).
++inline std::vector<uint8_t> Compile(bool round) {
++  std::vector<uint8_t> result;
++  static HMODULE module = LoadLibraryW(L"D3DCompiler_47.dll");
++  if (!module) {
++    XELOGW("Depth rounding: D3DCompiler_47.dll not found");
++    return result;
++  }
++  auto compile = reinterpret_cast<pD3DCompile>(
++      reinterpret_cast<void*>(GetProcAddress(module, "D3DCompile")));
++  if (!compile) {
++    return result;
++  }
++  const char* source = Source();
++  ID3DBlob* code = nullptr;
++  ID3DBlob* errors = nullptr;
++  HRESULT hr = compile(source, std::strlen(source), "wet_depth24.hlsl",
++                       nullptr, nullptr, round ? "RoundMain" : "TruncateMain",
++                       "ps_5_1", D3DCOMPILE_OPTIMIZATION_LEVEL3, 0, &code,
++                       &errors);
++  if (errors) {
++    XELOGW("Depth rounding shader compiler output: {}",
++           static_cast<const char*>(errors->GetBufferPointer()));
++    errors->Release();
++  }
++  if (SUCCEEDED(hr) && code) {
++    const uint8_t* data = static_cast<const uint8_t*>(code->GetBufferPointer());
++    result.assign(data, data + code->GetBufferSize());
++    XELOGW("Depth rounding: {} pixel shader ready ({} bytes)",
++           round ? "rounding" : "truncating", result.size());
++  } else {
++    XELOGW("Depth rounding: shader compilation failed (0x{:08X})",
++           uint32_t(hr));
++  }
++  if (code) {
++    code->Release();
++  }
++  return result;
++}
++
++}  // namespace wet_depth24
++}  // namespace d3d12
++}  // namespace gpu
++}  // namespace xe
++
++#endif  // XENIA_GPU_D3D12_WET_DEPTH24_H_
 diff --git a/src/xenia/gpu/d3d12/wet_readback.h b/src/xenia/gpu/d3d12/wet_readback.h
 new file mode 100644
-index 000000000..d784f90f7
+index 0000000..d784f90
 --- /dev/null
 +++ b/src/xenia/gpu/d3d12/wet_readback.h
 @@ -0,0 +1,181 @@
@@ -7427,7 +7595,7 @@ index 000000000..d784f90f7
 +#endif  // XENIA_GPU_D3D12_WET_READBACK_H_
 diff --git a/src/xenia/gpu/d3d12/wet_smaa.h b/src/xenia/gpu/d3d12/wet_smaa.h
 new file mode 100644
-index 000000000..69ee09c8c
+index 0000000..69ee09c
 --- /dev/null
 +++ b/src/xenia/gpu/d3d12/wet_smaa.h
 @@ -0,0 +1,742 @@
@@ -8175,7 +8343,7 @@ index 000000000..69ee09c8c
 +#endif  // XENIA_GPU_D3D12_WET_SMAA_H_
 diff --git a/src/xenia/gpu/d3d12/wet_smaa_tex.h b/src/xenia/gpu/d3d12/wet_smaa_tex.h
 new file mode 100644
-index 000000000..381928d08
+index 0000000..381928d
 --- /dev/null
 +++ b/src/xenia/gpu/d3d12/wet_smaa_tex.h
 @@ -0,0 +1,15074 @@
@@ -23254,7 +23422,7 @@ index 000000000..381928d08
 +
 +#endif  // XENIA_GPU_D3D12_WET_SMAA_TEX_H_
 diff --git a/src/xenia/gpu/dxbc_shader_translator.cc b/src/xenia/gpu/dxbc_shader_translator.cc
-index 96b7759e6..ce4be8cfd 100644
+index 96b7759..ce4be8c 100644
 --- a/src/xenia/gpu/dxbc_shader_translator.cc
 +++ b/src/xenia/gpu/dxbc_shader_translator.cc
 @@ -727,10 +727,32 @@ void DxbcShaderTranslator::StartPixelShader() {
@@ -23291,7 +23459,7 @@ index 96b7759e6..ce4be8cfd 100644
      if (shader_modification.pixel.param_gen_point) {
        // A point - always front-facing (the upper bit of X is 0), not a line
 diff --git a/src/xenia/gpu/dxbc_shader_translator_fetch.cc b/src/xenia/gpu/dxbc_shader_translator_fetch.cc
-index 64ee66b9b..333861899 100644
+index 64ee66b..3338618 100644
 --- a/src/xenia/gpu/dxbc_shader_translator_fetch.cc
 +++ b/src/xenia/gpu/dxbc_shader_translator_fetch.cc
 @@ -142,14 +142,42 @@ void DxbcShaderTranslator::ProcessVertexFetchInstruction(
@@ -23355,7 +23523,7 @@ index 64ee66b9b..333861899 100644
  
    // - Endian swap the words.
 diff --git a/src/xenia/gpu/graphics_system.cc b/src/xenia/gpu/graphics_system.cc
-index aa96166ef..42b1950d7 100644
+index aa96166..42b1950 100644
 --- a/src/xenia/gpu/graphics_system.cc
 +++ b/src/xenia/gpu/graphics_system.cc
 @@ -9,6 +9,12 @@
@@ -23515,7 +23683,7 @@ index aa96166ef..42b1950d7 100644
          uint64_t last_frame_time = Clock::QueryGuestTickCount();
          while (vsync_worker_running_) {
 diff --git a/src/xenia/gpu/graphics_system.h b/src/xenia/gpu/graphics_system.h
-index 8994b20bc..caf8a36c3 100644
+index 8994b20..caf8a36 100644
 --- a/src/xenia/gpu/graphics_system.h
 +++ b/src/xenia/gpu/graphics_system.h
 @@ -34,6 +34,23 @@ class Emulator;
@@ -23543,7 +23711,7 @@ index 8994b20bc..caf8a36c3 100644
  
  class GraphicsSystem {
 diff --git a/src/xenia/gpu/render_target_cache.cc b/src/xenia/gpu/render_target_cache.cc
-index 5c070f14e..05b535c78 100644
+index 5c070f1..05b535c 100644
 --- a/src/xenia/gpu/render_target_cache.cc
 +++ b/src/xenia/gpu/render_target_cache.cc
 @@ -10,6 +10,7 @@
@@ -23775,7 +23943,7 @@ index 5c070f14e..05b535c78 100644
        if (host_depth_encoding_different) {
          it->second.GetHostDepthRenderTarget(dest.GetDepthFormat()) = dest;
 diff --git a/src/xenia/gpu/render_target_cache.h b/src/xenia/gpu/render_target_cache.h
-index 6adf4f364..f497da17a 100644
+index 6adf4f3..f497da1 100644
 --- a/src/xenia/gpu/render_target_cache.h
 +++ b/src/xenia/gpu/render_target_cache.h
 @@ -10,6 +10,7 @@
@@ -23864,7 +24032,7 @@ index 6adf4f364..f497da17a 100644
    // If failed to create, may contain nullptr to prevent attempting to create a
    // render target twice.
 diff --git a/src/xenia/gpu/shared_memory.cc b/src/xenia/gpu/shared_memory.cc
-index 50694fdfe..b7e2f7307 100644
+index 50694fd..b7e2f73 100644
 --- a/src/xenia/gpu/shared_memory.cc
 +++ b/src/xenia/gpu/shared_memory.cc
 @@ -112,6 +112,13 @@ void SharedMemory::ClearCache() {
@@ -23882,7 +24050,7 @@ index 50694fdfe..b7e2f7307 100644
      GlobalWatchCallback callback, void* callback_context) {
    GlobalWatch* watch = new GlobalWatch;
 diff --git a/src/xenia/gpu/shared_memory.h b/src/xenia/gpu/shared_memory.h
-index 23249236c..1b8fb309e 100644
+index 2324923..1b8fb30 100644
 --- a/src/xenia/gpu/shared_memory.h
 +++ b/src/xenia/gpu/shared_memory.h
 @@ -32,6 +32,10 @@ class SharedMemory {
@@ -23897,7 +24065,7 @@ index 23249236c..1b8fb309e 100644
    typedef void (*GlobalWatchCallback)(
        const std::unique_lock<std::recursive_mutex>& global_lock, void* context,
 diff --git a/src/xenia/gpu/spirv_shader_translator_fetch.cc b/src/xenia/gpu/spirv_shader_translator_fetch.cc
-index e0fd8440d..15115f823 100644
+index e0fd844..15115f8 100644
 --- a/src/xenia/gpu/spirv_shader_translator_fetch.cc
 +++ b/src/xenia/gpu/spirv_shader_translator_fetch.cc
 @@ -2198,12 +2198,27 @@ void SpirvShaderTranslator::ProcessTextureFetchInstruction(
@@ -23931,7 +24099,7 @@ index e0fd8440d..15115f823 100644
                                    builder_->makeUintConstant(6)));
          {
 diff --git a/src/xenia/gpu/texture_cache.cc b/src/xenia/gpu/texture_cache.cc
-index 46820e2bb..6702f5b24 100644
+index 46820e2..6702f5b 100644
 --- a/src/xenia/gpu/texture_cache.cc
 +++ b/src/xenia/gpu/texture_cache.cc
 @@ -11,6 +11,7 @@
@@ -24138,7 +24306,7 @@ index 46820e2bb..6702f5b24 100644
    // invalidated by their shared memory watches.
    uint32_t resolve_page_first = address_first >> 12;
 diff --git a/src/xenia/gpu/texture_cache.h b/src/xenia/gpu/texture_cache.h
-index c892eee32..45f401bd8 100644
+index c892eee..45f401b 100644
 --- a/src/xenia/gpu/texture_cache.h
 +++ b/src/xenia/gpu/texture_cache.h
 @@ -16,6 +16,7 @@
@@ -24256,7 +24424,7 @@ index c892eee32..45f401bd8 100644
        textures_;
  
 diff --git a/src/xenia/gpu/vulkan/vulkan_command_processor.cc b/src/xenia/gpu/vulkan/vulkan_command_processor.cc
-index 7df306c12..c91fe704a 100644
+index 7df306c..c91fe70 100644
 --- a/src/xenia/gpu/vulkan/vulkan_command_processor.cc
 +++ b/src/xenia/gpu/vulkan/vulkan_command_processor.cc
 @@ -1258,7 +1258,13 @@ void VulkanCommandProcessor::IssueSwap(uint32_t frontbuffer_ptr,
@@ -24336,7 +24504,7 @@ index 7df306c12..c91fe704a 100644
  }
  
 diff --git a/src/xenia/gpu/vulkan/vulkan_texture_cache.cc b/src/xenia/gpu/vulkan/vulkan_texture_cache.cc
-index c52875ec6..4e0ba9688 100644
+index c52875e..4e0ba96 100644
 --- a/src/xenia/gpu/vulkan/vulkan_texture_cache.cc
 +++ b/src/xenia/gpu/vulkan/vulkan_texture_cache.cc
 @@ -675,6 +675,13 @@ VulkanTextureCache::SamplerParameters VulkanTextureCache::GetSamplerParameters(
@@ -24354,7 +24522,7 @@ index c52875ec6..4e0ba9688 100644
    parameters.mip_base_map = mip_filter == xenos::TextureFilter::kBaseMap;
  
 diff --git a/src/xenia/ui/d3d12/d3d12_api.h b/src/xenia/ui/d3d12/d3d12_api.h
-index 98eb495da..3803cb13d 100644
+index 98eb495..3803cb1 100644
 --- a/src/xenia/ui/d3d12/d3d12_api.h
 +++ b/src/xenia/ui/d3d12/d3d12_api.h
 @@ -31,6 +31,12 @@
@@ -24371,7 +24539,7 @@ index 98eb495da..3803cb13d 100644
  
  #endif  // XENIA_UI_D3D12_D3D12_API_H_
 diff --git a/src/xenia/ui/d3d12/d3d12_presenter.cc b/src/xenia/ui/d3d12/d3d12_presenter.cc
-index 337cbd922..830cfa94c 100644
+index 337cbd9..830cfa9 100644
 --- a/src/xenia/ui/d3d12/d3d12_presenter.cc
 +++ b/src/xenia/ui/d3d12/d3d12_presenter.cc
 @@ -21,6 +21,9 @@
@@ -24445,7 +24613,7 @@ index 337cbd922..830cfa94c 100644
        }
      }
 diff --git a/src/xenia/ui/d3d12/d3d12_presenter.h b/src/xenia/ui/d3d12/d3d12_presenter.h
-index a02a7e5b6..1e2efdf02 100644
+index a02a7e5..1e2efdf 100644
 --- a/src/xenia/ui/d3d12/d3d12_presenter.h
 +++ b/src/xenia/ui/d3d12/d3d12_presenter.h
 @@ -102,6 +102,10 @@ class D3D12Presenter final : public Presenter {
@@ -24482,7 +24650,7 @@ index a02a7e5b6..1e2efdf02 100644
          assert_unhandled_case(effect);
          return kGuestOutputPaintRootSignatureCount;
 diff --git a/src/xenia/ui/d3d12/d3d12_provider.cc b/src/xenia/ui/d3d12/d3d12_provider.cc
-index 287b64cb8..a7c1e4d48 100644
+index 287b64c..a7c1e4d 100644
 --- a/src/xenia/ui/d3d12/d3d12_provider.cc
 +++ b/src/xenia/ui/d3d12/d3d12_provider.cc
 @@ -18,6 +18,10 @@
@@ -24545,7 +24713,7 @@ index 287b64cb8..a7c1e4d48 100644
  
 diff --git a/src/xenia/ui/d3d12/wet_nis.h b/src/xenia/ui/d3d12/wet_nis.h
 new file mode 100644
-index 000000000..93a516335
+index 0000000..93a5163
 --- /dev/null
 +++ b/src/xenia/ui/d3d12/wet_nis.h
 @@ -0,0 +1,450 @@
@@ -25000,7 +25168,7 @@ index 000000000..93a516335
 +
 +#endif  // XENIA_UI_D3D12_WET_NIS_H_
 diff --git a/src/xenia/ui/presenter.cc b/src/xenia/ui/presenter.cc
-index ab28ca4b4..ac8908660 100644
+index ab28ca4..ac89086 100644
 --- a/src/xenia/ui/presenter.cc
 +++ b/src/xenia/ui/presenter.cc
 @@ -10,6 +10,7 @@
@@ -25110,7 +25278,7 @@ index ab28ca4b4..ac8908660 100644
           ffx_last_size.second < output_height_clamped)) {
        // AMD FidelityFX Super Resolution - upsample along at least one axis.
 diff --git a/src/xenia/ui/presenter.h b/src/xenia/ui/presenter.h
-index b1d38224e..97856cd16 100644
+index b1d3822..97856cd 100644
 --- a/src/xenia/ui/presenter.h
 +++ b/src/xenia/ui/presenter.h
 @@ -201,6 +201,10 @@ class Presenter {
@@ -25171,7 +25339,7 @@ index b1d38224e..97856cd16 100644
      kCount,
    };
 diff --git a/src/xenia/ui/window_win.cc b/src/xenia/ui/window_win.cc
-index f2458b69d..dda682882 100644
+index f2458b6..dda6828 100644
 --- a/src/xenia/ui/window_win.cc
 +++ b/src/xenia/ui/window_win.cc
 @@ -1047,7 +1047,8 @@ LRESULT Win32Window::WndProc(HWND hWnd, UINT message, WPARAM wParam,
@@ -25195,7 +25363,7 @@ index f2458b69d..dda682882 100644
  
      case WM_DPICHANGED: {
 diff --git a/src/xenia/ui/windowed_app_context_win.cc b/src/xenia/ui/windowed_app_context_win.cc
-index afee1a44f..cfd35d661 100644
+index afee1a4..cfd35d6 100644
 --- a/src/xenia/ui/windowed_app_context_win.cc
 +++ b/src/xenia/ui/windowed_app_context_win.cc
 @@ -39,30 +39,25 @@ bool Win32WindowedAppContext::Initialize() {
