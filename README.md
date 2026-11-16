@@ -21,6 +21,19 @@ nothing derived from the game is ever committed.
 **Playable.** Menus, Champion mode, fights and saving work. Still early: please report
 anything that goes wrong with `fightnight.log` (next to the game's exe).
 
+### What's new in 0.1.1
+
+- **Camera turning to the crowd fixed** (the prison fight every time, other fights near the
+  ropes now and then). The camera decides where to go from the game's visibility checks,
+  which are now measured on your graphics card instead of given a fixed answer.
+- **Flickering shadows on the fighters fixed** (worse when moving and at higher
+  resolutions): depth is kept at the Xbox's exact precision. This costs some graphics card
+  time; on lower-end PCs lower the resolution if the frame rate drops.
+- **Fighter moving on their own after tabbing out fixed**: the mouse and keyboard only
+  count while the game window is in front.
+- **On-screen keyboard skipping letters fixed** for controllers that show up twice in
+  Windows (an 8BitDo on its dongle, for one).
+
 ## Features
 
 - Native x64 Windows build of the game's own code, no emulator.
