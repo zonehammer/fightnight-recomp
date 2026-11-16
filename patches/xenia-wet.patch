@@ -4421,7 +4421,7 @@ index ffc8eef..92310c9 100644
    uint32_t primary_buffer_ptr_ = 0;
    uint32_t primary_buffer_size_ = 0;
 diff --git a/src/xenia/gpu/d3d12/d3d12_command_processor.cc b/src/xenia/gpu/d3d12/d3d12_command_processor.cc
-index 0ec70a7..1426970 100644
+index 0ec70a7..ed6ef43 100644
 --- a/src/xenia/gpu/d3d12/d3d12_command_processor.cc
 +++ b/src/xenia/gpu/d3d12/d3d12_command_processor.cc
 @@ -8,6 +8,9 @@
@@ -5098,11 +5098,45 @@ index 0ec70a7..1426970 100644
    return true;
  }
  
-@@ -2500,10 +3016,67 @@ bool D3D12CommandProcessor::IssueCopy() {
+@@ -2500,10 +3016,101 @@ bool D3D12CommandProcessor::IssueCopy() {
      return false;
    }
    uint32_t written_address, written_length;
 +#if XE_WET_RUNTIME
++  // WET diagnostics (WET_SKIP_DEPTH_ALIAS_RESOLVE=1): Fight Night resolves its
++  // shadow map's depth (k_24_8_FLOAT), then at once resolves the colour render
++  // target at the same EDRAM base - the depth bits reinterpreted as colour -
++  // to the same address, and the fighters' shadow lookups read what the
++  // second resolve left there. Skips that second resolve, to test whether
++  // the depth -> colour reinterpretation garbles the depth (the neck / chest
++  // flicker).
++  {
++    static const bool wet_skip_alias = [] {
++      const char* v = std::getenv("WET_SKIP_DEPTH_ALIAS_RESOLVE");
++      return v && std::atoi(v) != 0;
++    }();
++    static uint32_t wet_last_depth_dest = 0;
++    static uint64_t wet_last_depth_frame = 0;
++    const RegisterFile& wet_regs = *register_file_;
++    uint32_t wet_dest = wet_regs.values[XE_GPU_REG_RB_COPY_DEST_BASE];
++    bool wet_depth_copy =
++        (wet_regs.values[XE_GPU_REG_RB_COPY_CONTROL] & 7) == 4;
++    // Only the resolve straight after the depth one (later resolves to the
++    // same address in the frame are other passes reusing the memory).
++    bool wet_follows_depth = wet_last_depth_dest != 0 &&
++                             wet_dest == wet_last_depth_dest &&
++                             wet_last_depth_frame == frame_current_;
++    wet_last_depth_dest = wet_depth_copy ? wet_dest : 0;
++    wet_last_depth_frame = frame_current_;
++    if (!wet_depth_copy && wet_skip_alias && wet_follows_depth &&
++        !(wet_regs.values[XE_GPU_REG_RB_COPY_CONTROL] & 0x300)) {
++      if (wet_draw_trace_frames > 0) {
++        XELOGW("DRAWTRACE: resolve to base {:08X} skipped (colour over the "
++               "depth just resolved there)", wet_dest);
++      }
++      return true;
++    }
++  }
 +  reg::RB_COPY_DEST_INFO wet_copy_dest_info = {};
 +  bool wet_scaled = false;
 +  if (!render_target_cache_->Resolve(*memory_, *shared_memory_, *texture_cache_,
@@ -5166,7 +5200,7 @@ index 0ec70a7..1426970 100644
    if (cvars::d3d12_readback_resolve &&
        !texture_cache_->IsDrawResolutionScaled() && written_length) {
      // Read the resolved data on the CPU.
-@@ -2663,6 +3236,21 @@ bool D3D12CommandProcessor::BeginSubmission(bool is_guest_command) {
+@@ -2663,6 +3270,21 @@ bool D3D12CommandProcessor::BeginSubmission(bool is_guest_command) {
        }
        frame_completed_ = frame;
      }
@@ -5188,7 +5222,7 @@ index 0ec70a7..1426970 100644
    }
  
    if (!submission_open_) {
-@@ -2672,6 +3260,12 @@ bool D3D12CommandProcessor::BeginSubmission(bool is_guest_command) {
+@@ -2672,6 +3294,12 @@ bool D3D12CommandProcessor::BeginSubmission(bool is_guest_command) {
      // end of the submission (when async pipeline creation requests are
      // fulfilled).
      deferred_command_list_.Reset();
@@ -5201,7 +5235,7 @@ index 0ec70a7..1426970 100644
  
      // Reset cached state of the command list.
      ff_viewport_update_needed_ = true;
-@@ -2790,6 +3384,24 @@ bool D3D12CommandProcessor::EndSubmission(bool is_swap) {
+@@ -2790,6 +3418,24 @@ bool D3D12CommandProcessor::EndSubmission(bool is_swap) {
      // destroyed between frames.
      SubmitBarriers();
  
@@ -5226,7 +5260,7 @@ index 0ec70a7..1426970 100644
      // TODO(Triang3l): Error checking.
  
      ID3D12CommandQueue* direct_queue = provider.GetDirectQueue();
-@@ -2840,6 +3452,25 @@ bool D3D12CommandProcessor::EndSubmission(bool is_swap) {
+@@ -2840,6 +3486,25 @@ bool D3D12CommandProcessor::EndSubmission(bool is_swap) {
        pix_capturing_ = false;
      }
      frame_open_ = false;
@@ -5252,7 +5286,7 @@ index 0ec70a7..1426970 100644
      // Submission already closed now, so minus 1.
      closed_frame_submissions_[(frame_current_++) % kQueueFrames] =
          GetCurrentSubmission() - 1;
-@@ -2882,6 +3513,145 @@ bool D3D12CommandProcessor::EndSubmission(bool is_swap) {
+@@ -2882,6 +3547,145 @@ bool D3D12CommandProcessor::EndSubmission(bool is_swap) {
    return true;
  }
  
@@ -5398,7 +5432,7 @@ index 0ec70a7..1426970 100644
  bool D3D12CommandProcessor::CanEndSubmissionImmediately() const {
    return !submission_open_ || !pipeline_cache_->IsCreatingPipelines();
  }
-@@ -4311,6 +5081,175 @@ bool D3D12CommandProcessor::UpdateBindings(const D3D12Shader* vertex_shader,
+@@ -4311,6 +5115,175 @@ bool D3D12CommandProcessor::UpdateBindings(const D3D12Shader* vertex_shader,
    return true;
  }
  
@@ -5574,7 +5608,7 @@ index 0ec70a7..1426970 100644
  ID3D12Resource* D3D12CommandProcessor::RequestReadbackBuffer(uint32_t size) {
    if (size == 0) {
      return nullptr;
-@@ -4359,6 +5298,615 @@ void D3D12CommandProcessor::WriteGammaRampSRV(
+@@ -4359,6 +5332,615 @@ void D3D12CommandProcessor::WriteGammaRampSRV(
    device->CreateShaderResourceView(gamma_ramp_buffer_.Get(), &desc, handle);
  }
  
