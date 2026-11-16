@@ -4,7 +4,7 @@
 // 10 s, a line goes to fightnight.log ("CamTrace"), so a log of the camera
 // going wrong shows which of its code ran differently from then on. The first
 // few small values each function is given (r4, r5: shot / camera ids) are
-// logged too. FNC_CAMTRACE=0 turns it off.
+// logged too. Off unless FNC_CAMTRACE=1.
 #include "game.h"
 #include "log.h"
 #include "os.h"
@@ -32,7 +32,7 @@ namespace
     {
         static const bool on = [] {
             const char* v = std::getenv("FNC_CAMTRACE");
-            return !(v && v[0] == '0');
+            return v && v[0] == '1';
         }();
         return on;
     }
