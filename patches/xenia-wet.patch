@@ -3568,7 +3568,7 @@ index 8f6087b..47c87ee 100644
  
  static void set_name(HANDLE thread, const std::string_view name) {
 diff --git a/src/xenia/gpu/command_processor.cc b/src/xenia/gpu/command_processor.cc
-index ce08d19..8eb433a 100644
+index ce08d19..96c6e1b 100644
 --- a/src/xenia/gpu/command_processor.cc
 +++ b/src/xenia/gpu/command_processor.cc
 @@ -9,6 +9,15 @@
@@ -3595,7 +3595,7 @@ index ce08d19..8eb433a 100644
  #include "xenia/gpu/xenos.h"
  #include "xenia/kernel/kernel_state.h"
  #include "xenia/kernel/user_module.h"
-@@ -32,6 +42,314 @@
+@@ -32,6 +42,344 @@
  namespace xe {
  namespace gpu {
  
@@ -3755,6 +3755,36 @@ index ce08d19..8eb433a 100644
 +        regs.values[XE_GPU_REG_RB_DEPTHCONTROL],
 +        regs.values[XE_GPU_REG_RB_COLOR_MASK]);
 +  }
++  // Polygon offset (depth bias) as the game set it, and the textures the pixel
++  // shader reads: format, size, filtering (fetch constant / instruction
++  // override, 3 = use the constant) - to find the shadow map lookups.
++  XELOGW(
++      "DRAWTRACE:   poly offset front {} * slope + {} | back {} * slope + {} "
++      "| depth info {:08X}",
++      regs.Get<float>(XE_GPU_REG_PA_SU_POLY_OFFSET_FRONT_SCALE),
++      regs.Get<float>(XE_GPU_REG_PA_SU_POLY_OFFSET_FRONT_OFFSET),
++      regs.Get<float>(XE_GPU_REG_PA_SU_POLY_OFFSET_BACK_SCALE),
++      regs.Get<float>(XE_GPU_REG_PA_SU_POLY_OFFSET_BACK_OFFSET),
++      regs.values[XE_GPU_REG_RB_DEPTH_INFO]);
++  if (pixel_shader) {
++    for (const Shader::TextureBinding& tb : pixel_shader->texture_bindings()) {
++      xenos::xe_gpu_texture_fetch_t f = regs.GetTextureFetch(tb.fetch_constant);
++      const auto& a = tb.fetch_instr.attributes;
++      XELOGW(
++          "DRAWTRACE:   tex{} addr {:08X} format {} dim {} size {}x{} tiled {} "
++          "mag {}/{} min {}/{} mip {}/{} aniso {} clamp {} {} exp {} "
++          "swizzle {:03X} sign {}{}{}{} offset {} {}",
++          tb.fetch_constant, f.base_address << 12, uint32_t(f.format),
++          uint32_t(f.dimension), f.size_2d.width + 1, f.size_2d.height + 1,
++          uint32_t(f.tiled), uint32_t(f.mag_filter), uint32_t(a.mag_filter),
++          uint32_t(f.min_filter), uint32_t(a.min_filter),
++          uint32_t(f.mip_filter), uint32_t(a.mip_filter),
++          uint32_t(f.aniso_filter), uint32_t(f.clamp_x), uint32_t(f.clamp_y),
++          int32_t(f.exp_adjust), uint32_t(f.swizzle), uint32_t(f.sign_x),
++          uint32_t(f.sign_y), uint32_t(f.sign_z), uint32_t(f.sign_w),
++          a.offset_x, a.offset_y);
++    }
++  }
 +  for (const Shader::VertexBinding& vb : vertex_shader.vertex_bindings()) {
 +    xenos::xe_gpu_vertex_fetch_t vf = regs.GetVertexFetch(vb.fetch_constant);
 +    uint32_t addr = vf.address << 2, size = vf.size << 2;
@@ -3910,7 +3940,7 @@ index ce08d19..8eb433a 100644
  using namespace xe::gpu::xenos;
  
  CommandProcessor::CommandProcessor(GraphicsSystem* graphics_system,
-@@ -244,6 +562,7 @@ void CommandProcessor::WorkerThreadMain() {
+@@ -244,6 +592,7 @@ void CommandProcessor::WorkerThreadMain() {
        xe::store_and_swap<uint32_t>(
            memory_->TranslatePhysical(read_ptr_writeback_ptr_), read_ptr_index_);
      }
@@ -3918,7 +3948,7 @@ index ce08d19..8eb433a 100644
  
      // FIXME: We're supposed to process the WAIT_UNTIL register at this point,
      // but no games seem to actually use it.
-@@ -349,6 +668,7 @@ void CommandProcessor::WriteRegister(uint32_t index, uint32_t value) {
+@@ -349,6 +698,7 @@ void CommandProcessor::WriteRegister(uint32_t index, uint32_t value) {
        uint32_t scratch_addr = regs.values[XE_GPU_REG_SCRATCH_ADDR];
        uint32_t mem_addr = scratch_addr + (scratch_reg * 4);
        xe::store_and_swap<uint32_t>(memory_->TranslatePhysical(mem_addr), value);
@@ -3926,7 +3956,7 @@ index ce08d19..8eb433a 100644
      }
    } else {
      switch (index) {
-@@ -633,6 +953,26 @@ bool CommandProcessor::ExecutePacket(RingBuffer* reader) {
+@@ -633,6 +983,26 @@ bool CommandProcessor::ExecutePacket(RingBuffer* reader) {
    }
  }
  
@@ -3953,7 +3983,7 @@ index ce08d19..8eb433a 100644
  bool CommandProcessor::ExecutePacketType0(RingBuffer* reader, uint32_t packet) {
    // Type-0 packet.
    // Write count registers in sequence to the registers starting at
-@@ -650,6 +990,13 @@ bool CommandProcessor::ExecutePacketType0(RingBuffer* reader, uint32_t packet) {
+@@ -650,6 +1020,13 @@ bool CommandProcessor::ExecutePacketType0(RingBuffer* reader, uint32_t packet) {
  
    uint32_t base_index = (packet & 0x7FFF);
    uint32_t write_one_reg = (packet >> 15) & 0x1;
@@ -3967,7 +3997,7 @@ index ce08d19..8eb433a 100644
    for (uint32_t m = 0; m < count; m++) {
      uint32_t reg_data = reader->ReadAndSwap<uint32_t>();
      uint32_t target_index = write_one_reg ? base_index : base_index + m;
-@@ -743,21 +1090,26 @@ bool CommandProcessor::ExecutePacketType3(RingBuffer* reader, uint32_t packet) {
+@@ -743,21 +1120,26 @@ bool CommandProcessor::ExecutePacketType3(RingBuffer* reader, uint32_t packet) {
        break;
      case PM4_MEM_WRITE:
        result = ExecutePacketType3_MEM_WRITE(reader, packet, count);
@@ -3994,7 +4024,7 @@ index ce08d19..8eb433a 100644
        break;
      case PM4_DRAW_INDX:
        result = ExecutePacketType3_DRAW_INDX(reader, packet, count);
-@@ -932,11 +1284,46 @@ bool CommandProcessor::ExecutePacketType3_XE_SWAP(RingBuffer* reader,
+@@ -932,11 +1314,46 @@ bool CommandProcessor::ExecutePacketType3_XE_SWAP(RingBuffer* reader,
    uint32_t frontbuffer_ptr = reader->ReadAndSwap<uint32_t>();
    uint32_t frontbuffer_width = reader->ReadAndSwap<uint32_t>();
    uint32_t frontbuffer_height = reader->ReadAndSwap<uint32_t>();
@@ -4042,7 +4072,7 @@ index ce08d19..8eb433a 100644
    return true;
  }
  
-@@ -974,7 +1361,24 @@ bool CommandProcessor::ExecutePacketType3_WAIT_REG_MEM(RingBuffer* reader,
+@@ -974,7 +1391,24 @@ bool CommandProcessor::ExecutePacketType3_WAIT_REG_MEM(RingBuffer* reader,
                  : register_file_->values[poll_reg_addr];
  
    bool matched = false;
@@ -4067,7 +4097,7 @@ index ce08d19..8eb433a 100644
      uint32_t value = value_ref;
      if (is_memory) {
        trace_writer_.WriteMemoryRead(CpuToGpu(poll_reg_addr & ~uint32_t(0x3)),
-@@ -1013,16 +1417,31 @@ bool CommandProcessor::ExecutePacketType3_WAIT_REG_MEM(RingBuffer* reader,
+@@ -1013,16 +1447,31 @@ bool CommandProcessor::ExecutePacketType3_WAIT_REG_MEM(RingBuffer* reader,
          matched = true;
          break;
      }
@@ -4099,7 +4129,7 @@ index ce08d19..8eb433a 100644
          xe::threading::SyncMemory();
          ReturnFromWait();
  
-@@ -1035,6 +1454,17 @@ bool CommandProcessor::ExecutePacketType3_WAIT_REG_MEM(RingBuffer* reader,
+@@ -1035,6 +1484,17 @@ bool CommandProcessor::ExecutePacketType3_WAIT_REG_MEM(RingBuffer* reader,
        }
      }
    } while (!matched);
@@ -4117,7 +4147,7 @@ index ce08d19..8eb433a 100644
  
    return true;
  }
-@@ -1271,7 +1701,27 @@ bool CommandProcessor::ExecutePacketType3_EVENT_WRITE_ZPD(RingBuffer* reader,
+@@ -1271,7 +1731,27 @@ bool CommandProcessor::ExecutePacketType3_EVENT_WRITE_ZPD(RingBuffer* reader,
      // Older versions of D3D also checks for ZFail (4D5307D5).
      bool is_end_via_z_fail = pSampleCounts->ZFail_A == kQueryFinished &&
                               pSampleCounts->ZFail_B == kQueryFinished;
@@ -4145,7 +4175,7 @@ index ce08d19..8eb433a 100644
      if (is_end_via_z_pass || is_end_via_z_fail) {
        pSampleCounts->ZPass_A = fake_sample_count;
        pSampleCounts->Total_A = fake_sample_count;
-@@ -1455,10 +1905,14 @@ bool CommandProcessor::ExecutePacketType3_SET_CONSTANT(RingBuffer* reader,
+@@ -1455,10 +1935,14 @@ bool CommandProcessor::ExecutePacketType3_SET_CONSTANT(RingBuffer* reader,
        reader->AdvanceRead((count - 1) * sizeof(uint32_t));
        return true;
    }
@@ -4160,7 +4190,7 @@ index ce08d19..8eb433a 100644
    return true;
  }
  
-@@ -1467,10 +1921,14 @@ bool CommandProcessor::ExecutePacketType3_SET_CONSTANT2(RingBuffer* reader,
+@@ -1467,10 +1951,14 @@ bool CommandProcessor::ExecutePacketType3_SET_CONSTANT2(RingBuffer* reader,
                                                          uint32_t count) {
    uint32_t offset_type = reader->ReadAndSwap<uint32_t>();
    uint32_t index = offset_type & 0xFFFF;
@@ -4175,7 +4205,7 @@ index ce08d19..8eb433a 100644
    return true;
  }
  
-@@ -1506,11 +1964,20 @@ bool CommandProcessor::ExecutePacketType3_LOAD_ALU_CONSTANT(RingBuffer* reader,
+@@ -1506,11 +1994,20 @@ bool CommandProcessor::ExecutePacketType3_LOAD_ALU_CONSTANT(RingBuffer* reader,
        return true;
    }
    trace_writer_.WriteMemoryRead(CpuToGpu(address), size_dwords * 4);
@@ -4196,7 +4226,7 @@ index ce08d19..8eb433a 100644
    return true;
  }
  
-@@ -1518,10 +1985,14 @@ bool CommandProcessor::ExecutePacketType3_SET_SHADER_CONSTANTS(
+@@ -1518,10 +2015,14 @@ bool CommandProcessor::ExecutePacketType3_SET_SHADER_CONSTANTS(
      RingBuffer* reader, uint32_t packet, uint32_t count) {
    uint32_t offset_type = reader->ReadAndSwap<uint32_t>();
    uint32_t index = offset_type & 0xFFFF;
