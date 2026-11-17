@@ -868,7 +868,7 @@ extern "C" void __imp__sub_828D5BD0(PPCContext& ctx, uint8_t* base);
 // hint and the hold's progress. GameStateUtil::IsPauseMenuActive (sub_828D5BD0)
 // compares the top of the game state stack with the pause state; it reads two
 // globals, checked here first so it's never called before the game set them up.
-namespace wet { bool MoviePlaying(); }
+namespace wet { bool MoviePlaying(); void MemoryDumpPoll(); }
 
 static void UpdatePauseQuit(PPCContext& ctx)
 {
@@ -988,6 +988,8 @@ GUEST_IMPORT(VdSwap)
     renderer::DisplayAspect();
     if (renderer::Enabled())
         UpdatePauseQuit(ctx);
+    // F3: a full memory dump (memdump.cpp), taken here between frames.
+    wet::MemoryDumpPoll();
     // WET_DUMP_MEMORY_AT=<seconds>:<file>: the 512 MB of physical memory once
     // (diagnostics: finding resource names in what the game has loaded).
     if (static const char* dump = std::getenv("WET_DUMP_MEMORY_AT"); dump && *dump)

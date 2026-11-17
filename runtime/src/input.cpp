@@ -55,6 +55,7 @@
 
 namespace wet
 {
+    void RequestMemoryDump();   // memdump.cpp
     namespace
     {
         constexpr uint16_t kUp = 0x0001, kDown = 0x0002, kLeft = 0x0004, kRight = 0x0008,
@@ -630,6 +631,15 @@ namespace wet
                 }
             }
             f9 = f9Now;
+            // F3: dump the game's memory to frames\memdump_<n>.bin (diagnostics).
+            static bool f3 = false;
+            bool f3Now = (GetAsyncKeyState(VK_F3) & 0x8000) != 0;
+            if (f3Now && !f3)
+            {
+                Log("Input: F3 - memory dump at the next frame");
+                RequestMemoryDump();
+            }
+            f3 = f3Now;
             // F6: 30 / 60 / 120 / 144 / 165 / 240 FPS / the monitor rate.
             static bool f6 = false;
             bool f6Now = (GetAsyncKeyState(VK_F6) & 0x8000) != 0;
