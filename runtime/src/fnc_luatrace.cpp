@@ -3,7 +3,9 @@
 // shows. Every one ends in luaD_throw (sub_82842758, from luaG_errormsg
 // sub_82844D50, which runtime errors reach through addinfo sub_82844C40); the
 // message is the value on top of the Lua stack. Logged to fightnight.log as
-// "Lua error" (the first 200), then thrown as usual.
+// "Lua error" (the first 200), then thrown as usual. Scripts' print output
+// (luaB_print sub_8283FDD0 writes with fputs sub_82C76960 to stdout, which
+// goes nowhere) is logged too, as "Lua print" (the first 500 lines).
 #include "game.h"
 #include "log.h"
 #include "ppc_context.h"
@@ -16,6 +18,9 @@
 namespace
 {
     std::atomic<int> s_logged{ 0 };
+    std::atomic<int> s_prints{ 0 };
+    thread_local int t_inPrint = 0;
+    thread_local std::string t_line;
 
     const char* CodeName(uint32_t code)
     {
@@ -64,5 +69,38 @@ PPC_FUNC(sub_82842758)
             wet::Log("Lua error: no more are logged");
     }
     __imp__sub_82842758(ctx, base);
+}
+
+// luaB_print(lua_State* L): its output is gathered by the fputs hook below.
+extern "C" void __imp__sub_8283FDD0(PPCContext& ctx, uint8_t* base);
+PPC_FUNC(sub_8283FDD0)
+{
+    t_inPrint++;
+    t_line.clear();
+    __imp__sub_8283FDD0(ctx, base);
+    t_inPrint--;
+    if (!t_line.empty() && t_line.back() == '\n')
+        t_line.pop_back();
+    int n = s_prints.fetch_add(1, std::memory_order_relaxed);
+    if (n < 500)
+        wet::Log("Lua print: %s", t_line.c_str());
+    else if (n == 500)
+        wet::Log("Lua print: no more are logged");
+    t_line.clear();
+}
+
+// fputs(const char* s, FILE* f): inside print only, the text is kept.
+extern "C" void __imp__sub_82C76960(PPCContext& ctx, uint8_t* base);
+PPC_FUNC(sub_82C76960)
+{
+    if (t_inPrint && ctx.r3.u32 && t_line.size() < 1000)
+    {
+        const char* text = reinterpret_cast<const char*>(base + ctx.r3.u32);
+        size_t len = 0;
+        while (len < 1000 && text[len])
+            len++;
+        t_line.append(text, len);
+    }
+    __imp__sub_82C76960(ctx, base);
 }
 #endif
