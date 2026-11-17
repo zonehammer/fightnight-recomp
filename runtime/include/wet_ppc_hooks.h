@@ -2,6 +2,7 @@
 // Overrides hook macros that XenonUtils/ppc_context.h leaves #ifndef-guarded.
 #pragma once
 #include <cstdint>
+#include <cstring>
 
 struct PPCContext;
 
@@ -16,6 +17,21 @@ extern int g_wetVmxUnfused;
 // vrefp / vrsqrtefp: exact unless WET_VMX_ESTIMATE=1 at startup (diagnostics:
 // ~12-bit estimates like the console's).
 extern int g_wetVmxEstimate;
+
+// WET_NAN_TRACE=1 (diagnostics): every floating-point instruction reports,
+// once per address, when it turns NaN-free inputs into a NaN (nantrace.cpp).
+extern int g_wetNanTrace;
+inline bool WetHasNanV(const float* p)
+{
+    uint32_t u[4];
+    std::memcpy(u, p, 16);
+    for (uint32_t x : u)
+        if ((x & 0x7F800000u) == 0x7F800000u && (x & 0x007FFFFFu))
+            return true;
+    return false;
+}
+void WetNanHitV(uint32_t address, const float* out, const float (*in)[4], int inputs);
+void WetNanHitF(uint32_t address, double out, const double* in, int inputs);
 
 // Indirect calls (bctrl / function pointers / vtables): report misses instead of
 // jumping through a null table entry.

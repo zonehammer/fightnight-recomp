@@ -1,5 +1,5 @@
 diff --git a/XenonRecomp/recompiler.cpp b/XenonRecomp/recompiler.cpp
-index fa91527..e2c563c 100644
+index fa91527..c0943c6 100644
 --- a/XenonRecomp/recompiler.cpp
 +++ b/XenonRecomp/recompiler.cpp
 @@ -525,6 +525,128 @@ bool Recompiler::Recompile(
@@ -470,6 +470,92 @@ index fa91527..e2c563c 100644
          default:
              println("\t__builtin_debugtrap();");
              break;
+@@ -2427,11 +2743,85 @@ bool Recompiler::Recompile(const Function& fn)
+             if (insn.opcode->id == PPC_INST_BCTR && (*(data - 1) == 0x07008038 || *(data - 1) == 0x00000060) && switchTable == config.switchTables.end())
+                 fmt::println("Found a switch jump table at {:X} with no switch table entry present", base);
+ 
++            auto wetV = [&](size_t i)
++                {
++                    if ((config.nonArgumentRegistersAsLocalVariables && (i >= 32 && i <= 63)) ||
++                        (config.nonVolatileRegistersAsLocalVariables && ((i >= 14 && i <= 31) || (i >= 64 && i <= 127))))
++                    {
++                        localVariables.v[i] = true;
++                        return fmt::format("v{}", i);
++                    }
++                    return fmt::format("ctx.v{}", i);
++                };
++            auto wetF = [&](size_t i)
++                {
++                    if ((config.nonArgumentRegistersAsLocalVariables && i == 0) ||
++                        (config.nonVolatileRegistersAsLocalVariables && i >= 14))
++                    {
++                        localVariables.f[i] = true;
++                        return fmt::format("f{}", i);
++                    }
++                    return fmt::format("ctx.f{}", i);
++                };
++            // WET_NAN_TRACE (runtime, diagnostics): each floating-point
++            // instruction checks whether it made a NaN out of NaN-free inputs
++            // and reports its address once (WetNanHitV / WetNanHitF).
++            int wetNanKind = 0, wetNanInputs = 0;   // 1 vector, 2 scalar
++            switch (insn.opcode->id)
++            {
++            case PPC_INST_VADDFP: case PPC_INST_VADDFP128: case PPC_INST_VSUBFP: case PPC_INST_VSUBFP128:
++            case PPC_INST_VMULFP128: case PPC_INST_VMSUM3FP128: case PPC_INST_VMSUM4FP128:
++            case PPC_INST_VMAXFP: case PPC_INST_VMAXFP128: case PPC_INST_VMINFP: case PPC_INST_VMINFP128:
++                wetNanKind = 1; wetNanInputs = 2; break;
++            case PPC_INST_VMADDFP: case PPC_INST_VMADDFP128: case PPC_INST_VMADDCFP128:
++            case PPC_INST_VNMSUBFP: case PPC_INST_VNMSUBFP128:
++                wetNanKind = 1; wetNanInputs = 3; break;
++            case PPC_INST_VREFP: case PPC_INST_VREFP128: case PPC_INST_VRSQRTEFP: case PPC_INST_VRSQRTEFP128:
++            case PPC_INST_VEXPTEFP: case PPC_INST_VEXPTEFP128: case PPC_INST_VLOGEFP: case PPC_INST_VLOGEFP128:
++                wetNanKind = 1; wetNanInputs = 1; break;
++            case PPC_INST_FADD: case PPC_INST_FADDS: case PPC_INST_FSUB: case PPC_INST_FSUBS:
++            case PPC_INST_FMUL: case PPC_INST_FMULS: case PPC_INST_FDIV: case PPC_INST_FDIVS:
++                wetNanKind = 2; wetNanInputs = 2; break;
++            case PPC_INST_FMADD: case PPC_INST_FMADDS: case PPC_INST_FMSUB: case PPC_INST_FMSUBS:
++            case PPC_INST_FNMADDS: case PPC_INST_FNMSUB: case PPC_INST_FNMSUBS:
++                wetNanKind = 2; wetNanInputs = 3; break;
++            case PPC_INST_FSQRT: case PPC_INST_FSQRTS: case PPC_INST_FRES: case PPC_INST_FRSQRTE:
++                wetNanKind = 2; wetNanInputs = 1; break;
++            default: break;
++            }
++            if (wetNanKind == 1)
++            {
++                println("\t{{ alignas(16) float wetNanIn[3][4]; bool wetNanCk = false;");
++                print("\tif (g_wetNanTrace) [[unlikely]] {{ ");
++                for (int k = 0; k < wetNanInputs; k++)
++                    print("memcpy(wetNanIn[{}], {}.f32, 16); ", k, wetV(insn.operands[1 + k]));
++                println("wetNanCk = !WetHasNanV(wetNanIn[0]){}{}; }}",
++                    wetNanInputs > 1 ? " && !WetHasNanV(wetNanIn[1])" : "", wetNanInputs > 2 ? " && !WetHasNanV(wetNanIn[2])" : "");
++            }
++            else if (wetNanKind == 2)
++            {
++                println("\t{{ double wetNanIn[3]; bool wetNanCk = false;");
++                print("\tif (g_wetNanTrace) [[unlikely]] {{ ");
++                for (int k = 0; k < wetNanInputs; k++)
++                    print("wetNanIn[{}] = {}.f64; ", k, wetF(insn.operands[1 + k]));
++                print("wetNanCk = true; ");
++                for (int k = 0; k < wetNanInputs; k++)
++                    print("if (wetNanIn[{0}] != wetNanIn[{0}]) wetNanCk = false; ", k);
++                println("}}");
++            }
++
+             if (!Recompile(fn, base, insn, data, switchTable, localVariables, csrState))
+             {
+                 fmt::println("Unrecognized instruction at 0x{:X}: {}", base, insn.opcode->name);
+                 allRecompiled = false;
+             }
++
++            if (wetNanKind == 1)
++                println("\tif (wetNanCk && WetHasNanV({}.f32)) [[unlikely]] WetNanHitV(0x{:X}u, {}.f32, wetNanIn, {}); }}",
++                    wetV(insn.operands[0]), base, wetV(insn.operands[0]), wetNanInputs);
++            else if (wetNanKind == 2)
++                println("\tif (wetNanCk && {0}.f64 != {0}.f64) [[unlikely]] WetNanHitF(0x{1:X}u, {0}.f64, wetNanIn, {2}); }}",
++                    wetF(insn.operands[0]), base, wetNanInputs);
+         }
+ 
+         base += 4;
 diff --git a/XenonUtils/ppc_context.h b/XenonUtils/ppc_context.h
 index 31a86cd..c6c0d13 100644
 --- a/XenonUtils/ppc_context.h

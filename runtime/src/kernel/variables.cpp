@@ -35,6 +35,8 @@ namespace wet
             Log("CPU: WET_VMX_UNFUSED - vector multiply-add with two roundings (as 0.1.1)");
         if (g_wetVmxEstimate)
             Log("CPU: WET_VMX_ESTIMATE - vector reciprocal / square root estimates (~12 bits)");
+        if (g_wetNanTrace)
+            Log("CPU: WET_NAN_TRACE - floating-point instructions that make NaNs are logged (\"NaN made at\")");
 
         for (auto& imp : g_module.imports)
         {
@@ -113,6 +115,8 @@ int g_wetVmxUnfused = [] {
     const char* v = std::getenv("WET_VMX_UNFUSED");
     return v && v[0] == '1' ? 1 : 0;
 }();
+
+extern int g_wetNanTrace;   // nantrace.cpp
 
 // WET_VMX_ESTIMATE=1: vrefp / vrsqrtefp as ~12-bit estimates (see wet_ppc_hooks.h).
 int g_wetVmxEstimate = [] {
