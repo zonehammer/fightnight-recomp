@@ -550,3 +550,21 @@ PPC_FUNC_IMPL(__imp__sub_8231EF58) {
 PPC_FUNC_IMPL(__imp__sub_8231EFD8) {
 	PPC_FUNC_PROLOGUE();
 }
+
+// Lua error and print logging (fnc_luatrace.cpp).
+PPC_FUNC_IMPL(__imp__sub_82842758) {
+	PPC_FUNC_PROLOGUE();
+}
+PPC_FUNC_IMPL(__imp__sub_8283FDD0) {
+	PPC_FUNC_PROLOGUE();
+}
+PPC_FUNC_IMPL(__imp__sub_82C76960) {
+	PPC_FUNC_PROLOGUE();
+}
+// The fighters' first update waits for them to be placed (fnc_fighterplace.cpp).
+PPC_FUNC_IMPL(__imp__sub_82413DE0) {
+	PPC_FUNC_PROLOGUE();
+}
+PPC_FUNC_IMPL(__imp__sub_824358C8) {
+	PPC_FUNC_PROLOGUE();
+}
