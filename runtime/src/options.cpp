@@ -387,9 +387,7 @@ namespace wet::options
         // pages the game rewrites every frame left the GPU drawing the
         // fighters from stale copies now and then: flicker along the neckline,
         // chest and waist that the Xbox and other ports don't have.
-        // WET_ADAPTIVE_WATCH=1 still turns it on (diagnostics).
-        if (!std::getenv("WET_ADAPTIVE_WATCH"))
-            s_adaptiveWatch = false;
+        s_adaptiveWatch = false;
 #endif
         SetAdaptiveWatch(s_adaptiveWatch != 0);
         Save();

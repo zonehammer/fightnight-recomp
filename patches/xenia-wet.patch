@@ -7075,7 +7075,7 @@ index 1f68826..cbdcd1d 100644
  
    const D3D12CommandProcessor& command_processor_;
 diff --git a/src/xenia/gpu/d3d12/pipeline_cache.cc b/src/xenia/gpu/d3d12/pipeline_cache.cc
-index a81b196..fbf372d 100644
+index a81b196..f70b8a1 100644
 --- a/src/xenia/gpu/d3d12/pipeline_cache.cc
 +++ b/src/xenia/gpu/d3d12/pipeline_cache.cc
 @@ -13,6 +13,7 @@
@@ -7154,7 +7154,7 @@ index a81b196..fbf372d 100644
    if (!creation_threads_.empty()) {
      CreateQueuedPipelinesOnProcessorThread();
      // Await creation of all queued pipelines.
-@@ -2996,6 +3037,27 @@ ID3D12PipelineState* PipelineCache::CreateD3D12Pipeline(
+@@ -2996,6 +3037,23 @@ ID3D12PipelineState* PipelineCache::CreateD3D12Pipeline(
          state_desc.PS.pShaderBytecode = shaders::float24_truncate_ps;
          state_desc.PS.BytecodeLength = sizeof(shaders::float24_truncate_ps);
        }
@@ -7169,11 +7169,7 @@ index a81b196..fbf372d 100644
 +        const std::vector<uint8_t>& wet_ps =
 +            render_target_cache_.depth_float24_round() ? wet_round_ps
 +                                                       : wet_truncate_ps;
-+        // WET_DEPTH24_XENIA_PS=1 (diagnostics): Xenia's own shaders, which
-+        // don't link here, so these draws are skipped as in 0.1.1.
-+        static const bool wet_xenia_ps =
-+            std::getenv("WET_DEPTH24_XENIA_PS") != nullptr;
-+        if (!wet_ps.empty() && !wet_xenia_ps) {
++        if (!wet_ps.empty()) {
 +          state_desc.PS.pShaderBytecode = wet_ps.data();
 +          state_desc.PS.BytecodeLength = wet_ps.size();
 +        }
@@ -7182,7 +7178,7 @@ index a81b196..fbf372d 100644
      }
    }
  
-@@ -3037,6 +3099,26 @@ ID3D12PipelineState* PipelineCache::CreateD3D12Pipeline(
+@@ -3037,6 +3095,26 @@ ID3D12PipelineState* PipelineCache::CreateD3D12Pipeline(
        description.depth_bias_slope_scaled *
        float(std::max(render_target_cache_.draw_resolution_scale_x(),
                       render_target_cache_.draw_resolution_scale_y()));
@@ -7209,7 +7205,7 @@ index a81b196..fbf372d 100644
    state_desc.RasterizerState.DepthClipEnable =
        description.depth_clip ? TRUE : FALSE;
    uint32_t msaa_sample_count = uint32_t(1)
-@@ -3347,6 +3429,19 @@ void PipelineCache::CreationThread(size_t thread_index) {
+@@ -3347,6 +3425,19 @@ void PipelineCache::CreationThread(size_t thread_index) {
      {
        std::lock_guard<std::mutex> lock(creation_request_lock_);
        --creation_threads_busy_;
