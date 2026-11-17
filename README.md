@@ -21,6 +21,20 @@ nothing derived from the game is ever committed.
 **Playable.** Menus, Champion mode, fights and saving work. Still early: please report
 anything that goes wrong with `fightnight.log` (next to the game's exe).
 
+### What's new in 0.1.3
+
+- **Last Champion Mode fight fixed** (Isaac Frost): it started with an empty ring, no
+  fighters and no ropes, only the referee, and the camera stuck on him. This has been
+  there since 0.1.0 (the PS3 emulator RPCS3 had the same bug). The fighters' first
+  update ran a moment before they were placed in their corners, and that broke their
+  physics for the whole fight. The update now waits until they're placed.
+- **Replay cache no longer grows forever.** The game clears its instant-replay cache at
+  the start of each fight, and those deletes were ignored, so `game\hdd\cache` could reach
+  many GB. They now go through. Only the cache is affected, never saves. You can delete
+  the old `game\hdd\cache` folder to free the space; the game recreates it.
+- **Script errors in the log**: errors from the game's Lua scripts, which a retail build
+  never shows, are now written to `fightnight.log` ("Lua error").
+
 ### What's new in 0.1.2
 
 - **Flicker on the fighters' neckline, chest and waist fixed.** The "Fast memory tracking"
